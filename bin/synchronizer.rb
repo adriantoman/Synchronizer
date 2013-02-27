@@ -588,19 +588,19 @@ post do |global,command,options,args|
 end
 
 on_error do |exception|
-  #@log.error exception
-  #@log.error exception.backtrace
-  #@log.close
-  #Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s)
+  @log.error exception
+  @log.error exception.backtrace
+  @log.close
+  Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s)
 
-  pp exception.backtrace
-  if exception.is_a?(SystemExit) && exception.status == 0
-    false
-  else
-    pp exception.inspect
-
-    false
-  end
+  #pp exception.backtrace
+  #if exception.is_a?(SystemExit) && exception.status == 0
+  #  false
+  #else
+  #  pp exception.inspect
+  #
+  #  false
+  #end
 end
 
 
