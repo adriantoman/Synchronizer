@@ -3,8 +3,8 @@ $:.push File.expand_path("../lib", __FILE__)
 require "lib/version"
 
 Gem::Specification.new do |s|
-  s.name        = "attask"
-  s.version     = Attask::VERSION
+  s.name        = "synchronizer"
+  s.version     = Synchronizer::VERSION
   s.authors     = ["Adrian Toman"]
   s.email       = ["adrian.toman@gmail.com"]
   s.homepage    = ""
