@@ -1,10 +1,9 @@
 # -*- encoding: utf-8 -*-
 $:.push File.expand_path("../lib", __FILE__)
-require "lib/version.rb"
 
 Gem::Specification.new do |s|
   s.name        = "synchronizer"
-  s.version     = Synchronizer::VERSION
+  s.version     = "0.0.1"
   s.authors     = ["Adrian Toman"]
   s.email       = ["adrian.toman@gmail.com"]
   s.homepage    = ""
