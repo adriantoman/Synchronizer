@@ -16,7 +16,7 @@ require "lib/helper.rb"
 require "lib/google_downloader.rb"
 require 'cgi'
 require 'active_support/all'
-require 'logging'
+require 'logger'
 require "pony"
 include GLI
 
