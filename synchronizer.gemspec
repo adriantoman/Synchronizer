@@ -25,7 +25,6 @@ Gem::Specification.new do |s|
   s.add_dependency "ext"
   s.add_dependency "gli"
   s.add_dependency "attask"
-  s.add_dependency "active_support"
   s.add_dependency "logger"
   s.add_dependency "pony"
   s.add_dependency "rforce"
