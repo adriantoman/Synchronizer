@@ -35,13 +35,13 @@ module Synchronizer
     end
 
 
-    def printLog
-      puts "------------------------------------------"
-      puts "We have changed #{@entity} #{@name} (#{@id})"
+    def printLog(log)
+      log.info "------------------------------------------"
+      log.info "We have changed #{@entity} #{@name} (#{@id})"
       @change_log.each_value do |v|
-        puts v
+        log.info v
       end
-      puts "------------------------------------------"
+      log.info "------------------------------------------"
     end
 
 

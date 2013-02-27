@@ -16,6 +16,8 @@ require "lib/helper.rb"
 require "lib/google_downloader.rb"
 require 'cgi'
 require 'active_support/all'
+require 'logging'
+require "pony"
 include GLI
 
 program_desc 'Program for synchronizing task'
@@ -41,11 +43,18 @@ command :test do |c|
     at_password = options[:at_password]
 
 
+
     attask = Attask.client("gooddata",at_username,at_password)
 
-    project = Attask::Project.new()
-    project.ID =  "511cacee0002e569b972734795337efc"
-    attask.project.exec_function(project,"calculateFinance")
+    pp attask.project.search
+
+
+
+
+
+    #project = Attask::Project.new()
+    #project.ID =  "511cacee0002e569b972734795337efc"
+    #attask.project.exec_function(project,"calculateFinance")
 
 
   end
@@ -160,7 +169,8 @@ command :update do |c|
         end
 
         attask.project.update(project) if helper.changed
-        helper.printLog if helper.changed
+        helper.printLog(@log) if helper.changed
+        @work_done = true if helper.changed
 
 
         if (sfdc_object[:X1st_year_Services_Total__c] != nil and Float(sfdc_object[:X1st_year_Services_Total__c]) != 0 and sfdc_object[:PS_Hours__c] != nil and  Float(sfdc_object[:PS_Hours__c]) != 0) then
@@ -183,7 +193,7 @@ command :update do |c|
               newValue = newValue.round(2)
               if oldValue !=  newValue
                   rate.rateValue = newValue
-                  puts "We are updating rate from #{oldValue} to #{newValue} (#{rate.roleID}) for project #{project["ID"]}"
+                  @log.info "We are updating rate from #{oldValue} to #{newValue} (#{rate.roleID}) for project #{project["ID"]}"
                   attask.rate.update(rate)
                   recalculate = true
               end
@@ -192,10 +202,12 @@ command :update do |c|
                rate["projectID"] = project.ID
                rate["roleID"] = v
                rate["rateValue"] = rateValue.round(2)
-               puts "We are adding rate #{rateValue.round(2)} (#{v}) for project #{project["ID"]}"
+               @log.info "We are adding rate #{rateValue.round(2)} (#{v}) for project #{project["ID"]}"
                attask.rate.add(rate)
             end
             attask.project.exec_function(project,"calculateFinance") if recalculate == true
+            @work_done = true if recalculate == true
+
           end
         end
         end
@@ -365,7 +377,7 @@ command :add do |c|
       if (company == nil) then
         company = Attask::Company.new
         company["name"] = accountName
-        puts "Creating company #{company["name"]}"
+        @log.info "Creating company #{company["name"]}"
         company = attask.company.add(company).first
       end
 
@@ -387,9 +399,10 @@ command :add do |c|
       project[CGI.escape("DE:Salesforce ID")] = s[:Id].first
       project[CGI.escape("DE:Project Type")] = s[:Type]
 
-      puts "Creating project #{project.name} with SFDC ID #{s[:Id].first}"
+      @log.info "Creating project #{project.name} with SFDC ID #{s[:Id].first}"
 
       attask.project.add(project)
+      @work_done = true
     end
 
 
@@ -530,7 +543,7 @@ command :spredsheet do |c|
 
 
         attask.project.add(project)
-
+        @work_done = true
         end
     end
 
@@ -554,6 +567,10 @@ end
 
 pre do |global,command,options,args|
   next true if command.nil?
+  @log = Logger.new("migration_#{command.name}.log",'daily')
+  @work_done = false
+
+
   # Pre logic here
   # Return true to proceed; false to abourt and not call the
   # chosen command
@@ -563,25 +580,17 @@ pre do |global,command,options,args|
 end
 
 post do |global,command,options,args|
+  @log.close
+  Pony.mail(:to => "martin.hapl@gooddata.com",:cc => "adrian.toman@gooddata.com",:from => 'adrian.toman@gooddata.com', :subject => "Attask Synchronization - Some work was done in #{command.name}", :body => exception, :attachments => {"migration_#{command.name}.log" => File.read("migration_#{command.name}.log")}) if (@work_done)
   # Post logic here
   # Use skips_post before a command to skip this       id
   # block on that command only
 end
 
 on_error do |exception|
-  pp exception.backtrace
-  if exception.is_a?(SystemExit) && exception.status == 0
-    false
-  else
-    pp exception.inspect
-
-    false
-  end
-
-  # Error logic here
-  # return false to skip default error handling
-  # false
-  # true
+  @log.error exception
+  @log.close
+  Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s)
 end
 
 
