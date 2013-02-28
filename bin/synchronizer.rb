@@ -160,9 +160,9 @@ command :update do |c|
 
         if (duplicated_sfdc.count == 1 and sfdc_object[:X1st_year_Services_Total__c] != nil and project["DE:Project Type"] != "Maintenance") then
           project.budget = sfdc_object[:X1st_year_Services_Total__c] unless helper.comparerFloat(project.budget,sfdc_object[:X1st_year_Services_Total__c],"budget")
-        elsif project["DE:Project Type"] == "Maintenance"
-          project.budget = 0
-          helper.addText("0","budget")
+         #elsif project["DE:Project Type"] == "Maintenance" and project["budget"] != 0
+         #  project.budget = 0
+         #  helper.addText("0","budget")
         end
 
         # To fix problem with escaping
@@ -564,6 +564,62 @@ command :spredsheet do |c|
   end
 end
 
+
+
+desc 'Import jira'
+command :jira do |c|
+#  c.desc 'Execute only for one entity.'
+#  c.default_value false
+#  c.flag [:o, :only]
+
+  c.desc 'Username to Attask'
+  c.flag [:at_username]
+
+  c.desc 'Password to Attask'
+  c.flag [:at_password]
+
+
+  c.action do |global_options,options,args|
+
+    at_username = options[:at_username]
+    at_password = options[:at_password]
+
+    attask = Attask.client("gooddata",at_username,at_password)
+
+    projects = attask.project.search({:fields => "name,DE:Legacy ID",:customFields => ""})
+
+    arr_of_arrs = FasterCSV.read("/home/adrian.toman/import/projects.csv",{:headers=>true})
+
+    count = 0
+
+
+    projects = projects.find_all{|p| p["DE:Legacy ID"] != nil}
+
+    arr_of_arrs.each do |row|
+
+      value = projects.find {|p| p["DE:Legacy ID"].strip.casecmp(row["Key"].strip) == 0}
+
+
+      pp row if value == nil
+      #puts "nasel" if value != nil
+      #puts "nenasel" if value == nil
+
+
+
+
+      end
+
+
+    end
+
+
+
+
+
+
+
+
+end
 
 
 
