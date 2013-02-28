@@ -582,8 +582,8 @@ pre do |global,command,options,args|
 end
 
 post do |global,command,options,args|
-  @log.close
-  Pony.mail(:to => "martin.hapl@gooddata.com",:cc => "adrian.toman@gooddata.com",:from => 'adrian.toman@gooddata.com', :subject => "Attask Synchronization - Some work was done in #{command.name}", :body => exception, :attachments => {"migration_#{command.name}.log" => File.read("log/migration_#{command.name}.log")}) if (@work_done)
+  #@log.close
+  Pony.mail(:to => "martin.hapl@gooddata.com",:cc => "adrian.toman@gooddata.com",:from => 'attask@gooddata.com', :subject => "Attask Synchronization - Some work was done in #{command.name}", :body => "File in attachements", :attachments => {"migration_#{command.name}.log" => File.read("log/migration_#{command.name}.log")}) if (@work_done)
   # Post logic here
   # Use skips_post before a command to skip this       id
   # block on that command only
@@ -592,8 +592,8 @@ end
 on_error do |exception|
   @log.error exception
   @log.error exception.backtrace
-  @log.close
-  #Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s)
+  #@log.close
+  Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s)
 
   #pp exception.backtrace
   #if exception.is_a?(SystemExit) && exception.status == 0
