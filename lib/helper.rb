@@ -34,6 +34,11 @@ module Synchronizer
       end
     end
 
+    def addText(text,log)
+      @changed = true
+      @change_log[log] = "Key #{log} was changed to #{text}"
+    end
+
 
     def printLog(log)
       log.info "------------------------------------------"

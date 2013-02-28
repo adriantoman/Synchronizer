@@ -155,7 +155,7 @@ command :update do |c|
         end
 
         # Update budget if there is only one project with specific SFDC_ID
-        duplicated_sfdc = projects.find_all{|p| p["DE:Salesforce ID"] != nil and project["DE:Salesforce ID"] != nil and p["DE:Salesforce ID"].casecmp(project["DE:Salesforce ID"]) == 0 ? true : false}
+        duplicated_sfdc = projects.find_all{|p| p["DE:Salesforce ID"] != nil and project["DE:Salesforce ID"] != nil and project["DE:Project Type"] != "Maintenance" and p["DE:Salesforce ID"].casecmp(project["DE:Salesforce ID"]) == 0 ? true : false}
 
         # To fix problem with escaping
         # All the values are present if needed, but with URL escaping
@@ -165,9 +165,11 @@ command :update do |c|
         project.delete("DE:Practice Group")
         project.delete("DE:Service Type Subcategory")
 
-        if duplicated_sfdc.count == 1 and sfdc_object[:X1st_year_Services_Total__c] != nil then
+        if (duplicated_sfdc.count == 1 and sfdc_object[:X1st_year_Services_Total__c] != nil and project["DE:Project Type"] != "Maintenance") then
           project.budget = sfdc_object[:X1st_year_Services_Total__c] unless helper.comparerFloat(project.budget,sfdc_object[:X1st_year_Services_Total__c],"budget")
-
+        else if project["DE:Project Type"] == "Maintenance"
+          project.budget = 0
+          helper.addText("0","budget")
         end
 
         attask.project.update(project) if helper.changed
@@ -175,13 +177,12 @@ command :update do |c|
         @work_done = true if helper.changed
 
 
-        if (sfdc_object[:X1st_year_Services_Total__c] != nil and Float(sfdc_object[:X1st_year_Services_Total__c]) != 0 and sfdc_object[:PS_Hours__c] != nil and  Float(sfdc_object[:PS_Hours__c]) != 0) then
+        if (sfdc_object[:X1st_year_Services_Total__c] != nil and Float(sfdc_object[:X1st_year_Services_Total__c]) != 0 and sfdc_object[:PS_Hours__c] != nil and  Float(sfdc_object[:PS_Hours__c]) != 0 and project["DE:Project Type"] != "Maintenance") then
           budget = Float(sfdc_object[:X1st_year_Services_Total__c])
           hours = Float(sfdc_object[:PS_Hours__c])
           rateValue = budget / hours if hours > 0
 
           rates = attask.rate.search({},{:projectID => project.ID})
-
           @mapping.each_pair do |k,v|
             #Check if rate is in system
             recalculate = false
