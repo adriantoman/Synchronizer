@@ -154,8 +154,17 @@ command :update do |c|
           end
         end
 
+
         # Update budget if there is only one project with specific SFDC_ID
         duplicated_sfdc = projects.find_all{|p| p["DE:Salesforce ID"] != nil and project["DE:Salesforce ID"] != nil and project["DE:Project Type"] != "Maintenance" and p["DE:Salesforce ID"].casecmp(project["DE:Salesforce ID"]) == 0 ? true : false}
+
+        if (duplicated_sfdc.count == 1 and sfdc_object[:X1st_year_Services_Total__c] != nil and project["DE:Project Type"] != "Maintenance") then
+          project.budget = sfdc_object[:X1st_year_Services_Total__c] unless helper.comparerFloat(project.budget,sfdc_object[:X1st_year_Services_Total__c],"budget")
+        elsif project["DE:Project Type"] == "Maintenance"
+          puts "Budget to 0"
+          project.budget = 0
+          helper.addText("0","budget")
+        end
 
         # To fix problem with escaping
         # All the values are present if needed, but with URL escaping
@@ -164,13 +173,6 @@ command :update do |c|
         project.delete("DE:Services Type")
         project.delete("DE:Practice Group")
         project.delete("DE:Service Type Subcategory")
-
-        if (duplicated_sfdc.count == 1 and sfdc_object[:X1st_year_Services_Total__c] != nil and project["DE:Project Type"] != "Maintenance") then
-          project.budget = sfdc_object[:X1st_year_Services_Total__c] unless helper.comparerFloat(project.budget,sfdc_object[:X1st_year_Services_Total__c],"budget")
-        else if project["DE:Project Type"] == "Maintenance"
-          project.budget = 0
-          helper.addText("0","budget")
-        end
 
         attask.project.update(project) if helper.changed
         helper.printLog(@log) if helper.changed
