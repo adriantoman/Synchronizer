@@ -142,8 +142,10 @@ command :update do |c|
             project[CGI.escape("DE:Practice Group")] = sfdc_object[:Practice_Group__c] unless helper.comparerString(project["DE:Practice Group"],sfdc_object[:Practice_Group__c],"Practice Group")
           end
 
-          project[CGI.escape("DE:Services Type")] = sfdc_object[:Services_Type__c] unless helper.comparerString(project["DE:Services Type"],sfdc_object[:Services_Type__c],"Services Type")
-          project[CGI.escape("DE:Service Type Subcategory")] = sfdc_object[:Services_Type_Subcategory__c] unless helper.comparerString(project["DE:Service Type Subcategory"],sfdc_object[:Services_Type_Subcategory__c],"Service Type Subcategory")
+          if (project["categoryID"] == "50f5a7ee000d0278de51cc3a4d803e62") then
+            project[CGI.escape("DE:Services Type")] = sfdc_object[:Services_Type__c] unless helper.comparerString(project["DE:Services Type"],sfdc_object[:Services_Type__c],"Services Type")
+            project[CGI.escape("DE:Service Type Subcategory")] = sfdc_object[:Services_Type_Subcategory__c] unless helper.comparerString(project["DE:Service Type Subcategory"],sfdc_object[:Services_Type_Subcategory__c],"Service Type Subcategory")
+          end
 
           # STATUS == Awaiting Sign-off then Condition Type = Manual and Status = On Target
           if (project["status"] == "ASO") then
@@ -591,7 +593,7 @@ on_error do |exception|
   @log.error exception
   @log.error exception.backtrace
   @log.close
-  Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s)
+  #Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s)
 
   #pp exception.backtrace
   #if exception.is_a?(SystemExit) && exception.status == 0
