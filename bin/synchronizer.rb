@@ -160,9 +160,6 @@ command :update do |c|
 
         if (duplicated_sfdc.count == 1 and sfdc_object[:X1st_year_Services_Total__c] != nil and project["DE:Project Type"] != "Maintenance") then
           project.budget = sfdc_object[:X1st_year_Services_Total__c] unless helper.comparerFloat(project.budget,sfdc_object[:X1st_year_Services_Total__c],"budget")
-         #elsif project["DE:Project Type"] == "Maintenance" and project["budget"] != 0
-         #  project.budget = 0
-         #  helper.addText("0","budget")
         end
 
         # To fix problem with escaping
