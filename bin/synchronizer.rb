@@ -46,7 +46,22 @@ command :test do |c|
 
     attask = Attask.client("gooddata",at_username,at_password)
 
-    pp attask.project.search
+    projects = attask.project.search({:fields=>"ID,groupID",:customFields =>""})
+
+    projects = projects.find_all{|p| p["groupID"] == "50f49e85000893b820341d23978dd05b"}
+
+    projects.each do |p|
+      p["ownerPrivileges"] = "APT"
+      attask.project.update(p)
+    end
+
+
+
+
+    #pp attask.project.search
+
+
+    #"APT"
 
 
 
@@ -394,6 +409,7 @@ command :add do |c|
       project["groupID"] = "50f49e85000893b820341d23978dd05b"
       project["scheduleID"] = "50f558520003e0c8c8d1290e0d051571"
       project["milestonePathID"] = "50f5e5be001a53c6b9027b25d7b00854"
+      project["ownerPrivileges"] = "APT"
 
       #project["templateID"] = # ?
 
@@ -648,7 +664,7 @@ on_error do |exception|
   @log.error exception
   @log.error exception.backtrace
   #@log.close
-  Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s)
+  Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s) if ENV["USERNAME"] != "adrian.toman"
 
   #pp exception.backtrace
   #if exception.is_a?(SystemExit) && exception.status == 0
