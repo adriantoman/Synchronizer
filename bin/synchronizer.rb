@@ -14,6 +14,7 @@ require "attask"
 require "lib/synchronizer.rb"
 require "lib/helper.rb"
 require "lib/google_downloader.rb"
+require "lib/s3_loader.rb"
 require 'cgi'
 require 'active_support/all'
 require 'logger'
@@ -295,12 +296,23 @@ command :init do |c|
   c.desc 'Export path'
   c.flag [:export]
 
+  c.desc 'S3 access key'
+  c.flag [:s3_access]
+
+  s.desc 'S3 secret key'
+  c.flag [:s3_secret]
+
+
+
+
 
   c.action do |global_options,options,args|
 
     at_username = options[:at_username]
     at_password = options[:at_password]
     export = options[:export]
+    s3_access = options[:s3_access]
+    s3_secret = options[:s3_secret]
 
     attask = Attask.client("gooddata",at_username,at_password)
 
@@ -316,7 +328,7 @@ command :init do |c|
     attask.hour.exportToCsv({:filename => "hour.csv",:filepath => export})
     attask.hourtype.exportToCsv({:filename => "hourtype.csv",:filepath => export})
     attask.issue.exportToCsv({:filename => "issue.csv",:filepath => export})
-    ##attask.rate.exportToCsv({:filename => "rate.csv",:filepath => "/home/adrian.toman/export/"})
+    ###attask.rate.exportToCsv({:filename => "rate.csv",:filepath => "/home/adrian.toman/export/"})
     attask.resourcepool.exportToCsv({:filename => "resourcepool.csv",:filepath => export})
     attask.risk.exportToCsv({:filename => "risk.csv",:filepath => export})
     attask.risktype.exportToCsv({:filename => "risktype.csv",:filepath => export})
@@ -327,6 +339,42 @@ command :init do |c|
     attask.timesheet.exportToCsv({:filename => "timesheet.csv",:filepath => export})
     attask.user.exportToCsv({:filename => "user.csv",:filepath => export})
     attask.milestone.exportToCsv({:filename => "milestone.csv",:filepath => export})
+
+
+    # Generate Metadata
+    main = Hash.new
+    main["assigment"] = createHash(attask.assigment.metadata["data"])
+    main["baseline"] = createHash(attask.baseline.metadata["data"])
+    main["baselinetask"] = createHash(attask.baselinetask.metadata["data"])
+    main["category"] = createHash(attask.category.metadata["data"])
+    main["company"] = createHash(attask.company.metadata["data"])
+    main["expense"] = createHash(attask.expense.metadata["data"])
+    main["expensetype"] = createHash(attask.expensetype.metadata["data"])
+    main["group"] = createHash(attask.group.metadata["data"])
+    main["hour"] = createHash(attask.hour.metadata["data"])
+    main["hourtype"] = createHash(attask.hourtype.metadata["data"])
+    main["issue"] = createHash(attask.issue.metadata["data"])
+    main["resourcepool"] = createHash(attask.resourcepool.metadata["data"])
+    main["risk"] = createHash(attask.risk.metadata["data"])
+    main["risktype"] = createHash(attask.risktype.metadata["data"])
+    main["role"] = createHash(attask.role.metadata["data"])
+    main["schedule"] = createHash(attask.schedule.metadata["data"])
+    main["task"] = createHash(attask.task.metadata["data"])
+    main["team"] = createHash(attask.team.metadata["data"])
+    main["timesheet"] = createHash(attask.timesheet.metadata["data"])
+    main["user"] = createHash(attask.user.metadata["data"])
+    main["project"] = createHash(attask.project.metadata["data"])
+    main["milestone"] = createHash(attask.milestone.metadata["data"])
+
+    File.open(export + "metadata.json","w") do |f|
+      f.write(JSON.pretty_generate(main))
+    end
+
+    s3 = Synchronizer::S3.new(s3_access,s3_secret,"gooddata_com_attask",@log)
+    s3.store_to_s3(export)
+
+
+
 
   end
 end
