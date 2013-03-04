@@ -258,6 +258,9 @@ command :generate_metadata do |c|
 
     attask = Attask.client("gooddata",at_username,at_password)
 
+
+    pp attask.project.metadata["data"]
+
     main = Hash.new
 
     main["assigment"] = createHash(attask.assigment.metadata["data"])
@@ -742,7 +745,7 @@ def createHash(collection)
   end
   if collection["custom"] != nil then
     collection["custom"].each_pair do |key,value|
-      temp["DE:"+ key] = {"name" => "DE:" + key,"type" => value["fieldType"]}
+      temp["DE:"+ key] = {"name" => "DE:" + key,"type" => value["type"]}
     end
   end
   temp
