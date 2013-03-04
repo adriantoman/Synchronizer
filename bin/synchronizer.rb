@@ -735,14 +735,14 @@ def createHash(collection)
   temp = Hash.new
   collection["fields"].each_pair do |key,value|
     if (key != "password" and key != "auditUserIDs" and key != "auditNote") then
-      temp[key] = {"name" => key,"type" => value["type"]}
+      temp[key] = {"name" => key,"type" => value["fieldType"]}
     else
       puts key
     end
   end
   if collection["custom"] != nil then
     collection["custom"].each_pair do |key,value|
-      temp["DE:"+ key] = {"name" => "DE:" + key,"type" => value["type"]}
+      temp["DE:"+ key] = {"name" => "DE:" + key,"type" => value["fieldType"]}
     end
   end
   temp
