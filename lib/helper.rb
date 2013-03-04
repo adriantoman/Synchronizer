@@ -40,6 +40,12 @@ module Synchronizer
     end
 
 
+    def getProjectInfo(log)
+      log.info "------------------------------------------"
+      log.info "We have changed #{@entity} #{@name} (#{@id})"
+    end
+
+
     def printLog(log)
       log.info "------------------------------------------"
       log.info "We have changed #{@entity} #{@name} (#{@id})"

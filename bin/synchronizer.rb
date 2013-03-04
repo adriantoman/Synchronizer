@@ -210,8 +210,9 @@ command :update do |c|
               newValue = newValue.round(2)
               if oldValue !=  newValue
                   rate.rateValue = newValue
-                  @log.info "We are updating rate from #{oldValue} to #{newValue} (#{rate.roleID}) for project #{project["ID"]}"
                   attask.rate.update(rate)
+                  helper.getProjectInfo(@log) if recalculate == false
+                  @log.info "We are updating rate from #{oldValue} to #{newValue} (#{rate.roleID}) for project #{project["ID"]}"
                   recalculate = true
               end
             else
@@ -219,11 +220,16 @@ command :update do |c|
                rate["projectID"] = project.ID
                rate["roleID"] = v
                rate["rateValue"] = rateValue.round(2)
+               helper.getProjectInfo(@log) if recalculate == false
                @log.info "We are adding rate #{rateValue.round(2)} (#{v}) for project #{project["ID"]}"
                attask.rate.add(rate)
+               recalculate = true
             end
             attask.project.exec_function(project,"calculateFinance") if recalculate == true
-            @work_done = true if recalculate == true
+            if recalculate == true then
+              @work_done = true
+              @log.info "------------------------------------------"
+            end
 
           end
         end
