@@ -436,7 +436,7 @@ command :add do |c|
 
     # This section will create warn messages, when there is incorectly set opportunity in SFDC
     incorectly_filled = salesforce.filter_out_without_control("6 - CLOSED WON")
-    incorectly_filled = salesforce.notAlreadyCreated(incorectly_filled,projects)
+    incorectly_filled = salesforce.notAlreadyCreated_out(incorectly_filled,projects)
 
     @log.info "There are some oportunities with services but without PS hours" if incorectly_filled.count > 0
     incorectly_filled.each do |i|

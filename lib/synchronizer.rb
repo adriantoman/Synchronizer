@@ -88,7 +88,7 @@ module Synchronizer
       end
     end
 
-    def notAlreadyCreated(output,array)
+    def notAlreadyCreated_out(output,array)
       output.find_all do |s|
         projects = array.find_all {|p| p["DE:Salesforce ID"].casecmp(s[:Id].first) == 0 ? true : false}
         if (projects != nil and projects.count > 0) then
