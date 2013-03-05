@@ -47,14 +47,15 @@ command :test do |c|
 
     attask = Attask.client("gooddata",at_username,at_password)
 
-    projects = attask.project.search({:fields=>"ID,groupID",:customFields =>""})
+    projects = attask.project.search({:fields=>"ID",:customFields =>"DE:Salesforce ID"})
 
-    projects = projects.find_all{|p| p["groupID"] == "50f49e85000893b820341d23978dd05b"}
+    projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil}
 
     projects.each do |p|
-      p["ownerPrivileges"] = "APT"
+      p["URL"] = "https://na6.salesforce.com/#{p["DE:Salesforce ID"]}"
+      p.delete("DE:Salesforce ID")
       attask.project.update(p)
-    end
+   end
 
 
 
@@ -467,6 +468,7 @@ command :add do |c|
       project["scheduleID"] = "50f558520003e0c8c8d1290e0d051571"
       project["milestonePathID"] = "50f5e5be001a53c6b9027b25d7b00854"
       project["ownerPrivileges"] = "APT"
+      project["URL"] = "https://na6.salesforce.com/#{s[:Id].first}" if s[:Id].first != nil
 
       #project["templateID"] = # ?
 
@@ -721,7 +723,7 @@ on_error do |exception|
   @log.error exception
   @log.error exception.backtrace
   #@log.close
-  #Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s) if ENV["USERNAME"] != "adrian.toman"
+  Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s) if ENV["USERNAME"] != "adrian.toman"
 
   #pp exception.backtrace
   #if exception.is_a?(SystemExit) && exception.status == 0
