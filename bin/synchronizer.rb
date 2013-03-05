@@ -198,11 +198,10 @@ command :update do |c|
           rateValue = budget / hours if hours > 0
 
           rates = attask.rate.search({},{:projectID => project.ID})
+          recalculate = false
+
           @mapping.each_pair do |k,v|
             #Check if rate is in system
-            recalculate = false
-
-
             rate = rates.find{|r| r.roleID == v}
             if (rate != nil)
               oldValue = Float(rate.rateValue)
@@ -435,7 +434,20 @@ command :add do |c|
 
     projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil }
 
+    # This section will create warn messages, when there is incorectly set opportunity in SFDC
+    incorectly_filled = salesforce.filter_out_without_control("6 - CLOSED WON")
+    incorectly_filled = salesforce.notAlreadyCreated(incorectly_filled,projects)
+
+    @log.info "There are some oportunities with services but without PS hours" if incorectly_filled.count > 0
+    incorectly_filled.each do |i|
+      @log.info "--------------------------------"
+      @log.info "SFDC name:#{i[:Name]} SFDC id:#{i[:Id].first}"
+      @log.info "--------------------------------"
+    end
+    @work_done = true  if incorectly_filled.count > 0
+
     salesforce.filter("6 - CLOSED WON")
+
     salesforce.notAlreadyCreated(projects)
 
     salesforce.output.each do |s|
@@ -723,7 +735,7 @@ on_error do |exception|
   @log.error exception
   @log.error exception.backtrace
   #@log.close
-  Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s) if ENV["USERNAME"] != "adrian.toman"
+  #Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s) if ENV["USERNAME"] != "adrian.toman"
 
   #pp exception.backtrace
   #if exception.is_a?(SystemExit) && exception.status == 0
@@ -740,6 +752,8 @@ def createHash(collection)
   temp = Hash.new
   collection["fields"].each_pair do |key,value|
     if (key != "password" and key != "auditUserIDs" and key != "auditNote") then
+      fail "Unknown field fieldType" if value["fieldType"] == nil
+
       temp[key] = {"name" => key,"type" => value["fieldType"]}
     else
       puts key
@@ -747,6 +761,7 @@ def createHash(collection)
   end
   if collection["custom"] != nil then
     collection["custom"].each_pair do |key,value|
+      fail "Unknown field type" if value["type"] == nil
       temp["DE:"+ key] = {"name" => "DE:" + key,"type" => value["type"]}
     end
   end

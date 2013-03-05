@@ -68,18 +68,37 @@ module Synchronizer
       @output = @output.find_all {|s| s[:StageName] == value and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) > 0}
     end
 
+    def filter_out(value)
+      @output.find_all {|s| s[:StageName] == value and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) > 0}
+    end
+
+    def filter_out_without_control(value)
+      @output.find_all {|s| s[:StageName] == value and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) == 0}
+    end
+
+
     def notAlreadyCreated(array)
       @output = @output.find_all do |s|
         projects = array.find_all {|p| p["DE:Salesforce ID"].casecmp(s[:Id].first) == 0 ? true : false}
         if (projects != nil and projects.count > 0) then
-          #puts "Je tam #{s[:Id].first}"
           false
         else
-          #puts "Neni tam #{s[:Id].first}"
           true
         end
       end
     end
+
+    def notAlreadyCreated(output,array)
+      output.find_all do |s|
+        projects = array.find_all {|p| p["DE:Salesforce ID"].casecmp(s[:Id].first) == 0 ? true : false}
+        if (projects != nil and projects.count > 0) then
+          false
+        else
+          true
+        end
+      end
+    end
+
 
   end
 
