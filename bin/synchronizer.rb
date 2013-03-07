@@ -149,7 +149,7 @@ command :update do |c|
           end
 
           project["companyID"] =  "50e6fa86001bd48395eb3772aaafe2c9" unless helper.comparerString(project["companyID"],"50e6fa86001bd48395eb3772aaafe2c9","companyID")
-          project["groupID"] = "50f731ae002a695ba0f5eb3fe47f34ff" unless helper.comparerString(project["groupID"],"50f731ae002a695ba0f5eb3fe47f34ff","groupID")
+          #project["groupID"] = "50f731ae002a695ba0f5eb3fe47f34ff" unless helper.comparerString(project["groupID"],"50f731ae002a695ba0f5eb3fe47f34ff","groupID")
 
         else
           # UPDATE CONDITIONS -> Every time
