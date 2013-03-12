@@ -121,7 +121,7 @@ command :update do |c|
     attask = Attask.client("gooddata",at_username,at_password)
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
-    projects = attask.project.search({:fields => "ID,name,companyID,groupID,status,condition,conditionType,budget",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Practice Group,DE:Services Type,DE:Service Type Subcategory"})
+    projects = attask.project.search({:fields => "ID,name,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Practice Group,DE:Services Type,DE:Service Type Subcategory"})
 
 
     salesforce = Synchronizer::SalesForce.new( sf_username,sf_password)
@@ -134,9 +134,8 @@ command :update do |c|
 
     projects.each do |project|
 
-
-      helper = Synchronizer::Helper.new(project["ID"],project["name"],"project")
-      sfdc_object = salesforce.getValueByField(:Id,project["DE:Salesforce ID"])
+    helper = Synchronizer::Helper.new(project["ID"],project["name"],"project")
+    sfdc_object = salesforce.getValueByField(:Id,project["DE:Salesforce ID"])
 
       if sfdc_object.first != nil then
 
