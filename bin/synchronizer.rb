@@ -121,7 +121,7 @@ command :update do |c|
     attask = Attask.client("gooddata",at_username,at_password)
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
-    projects = attask.project.search({:fields => "ID,name,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Practice Group,DE:Services Type,DE:Service Type Subcategory"})
+    projects = attask.project.search({:fields => "ID,name,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Salesforce Type,DE:Practice Group,DE:Services Type,DE:Service Type Subcategory"})
 
 
     salesforce = Synchronizer::SalesForce.new( sf_username,sf_password)
@@ -142,8 +142,8 @@ command :update do |c|
         sfdc_object  = sfdc_object.first
 
         if (project["DE:Salesforce ID"].casecmp("0068000000gubcKAAQ") == 0) then
-          if (project["DE:Project Type"] != "Maintenance" and project["DE:Project Type"] != "Migration" and project["DE:Project Type"] != "Customer Success" ) then
-            project[CGI.escape("DE:Project Type")] = "Internal" unless helper.comparerString(project["DE:Project Type"],"Internal","Project Type")
+          if (project["DE:Salesforce Type"] != "Maintenance" and project["DE:Salesforce Type"] != "Migration" and project["DE:Salesforce Type"] != "Customer Success" ) then
+            project[CGI.escape("DE:Salesforce Type")] = "Internal" unless helper.comparerString(project["DE:Salesforce Type"],"Internal","Salesforce Type")
             project[CGI.escape("DE:Practice Group")] = "Europe" unless helper.comparerString(project["DE:Practice Group"],"Europe","Practice Group")
           end
 
@@ -153,8 +153,8 @@ command :update do |c|
         else
           # UPDATE CONDITIONS -> Every time
 
-          if (project["DE:Project Type"] != "Maintenance" and project["DE:Project Type"] != "Migration" and project["DE:Project Type"] != "Customer Success" ) then
-            project[CGI.escape("DE:Project Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Project Type"],sfdc_object[:Type],"Project Type")
+          if (project["DE:Salesforce Type"] != "Maintenance" and project["DE:Salesforce Type"] != "Migration" and project["DE:Salesforce Type"] != "Customer Success" ) then
+            project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Type],"Salesforce Type")
             project[CGI.escape("DE:Practice Group")] = sfdc_object[:Practice_Group__c] unless helper.comparerString(project["DE:Practice Group"],sfdc_object[:Practice_Group__c],"Practice Group")
           end
 
@@ -172,16 +172,16 @@ command :update do |c|
 
 
         # Update budget if there is only one project with specific SFDC_ID
-        duplicated_sfdc = projects.find_all{|p| p["DE:Salesforce ID"] != nil and project["DE:Salesforce ID"] != nil and project["DE:Project Type"] != "Maintenance" and p["DE:Salesforce ID"].casecmp(project["DE:Salesforce ID"]) == 0 ? true : false}
+        duplicated_sfdc = projects.find_all{|p| p["DE:Salesforce ID"] != nil and project["DE:Salesforce ID"] != nil and project["DE:Salesforce Type"] != "Maintenance" and p["DE:Salesforce ID"].casecmp(project["DE:Salesforce ID"]) == 0 ? true : false}
 
-        if (duplicated_sfdc.count == 1 and sfdc_object[:X1st_year_Services_Total__c] != nil and project["DE:Project Type"] != "Maintenance") then
+        if (duplicated_sfdc.count == 1 and sfdc_object[:X1st_year_Services_Total__c] != nil and project["DE:Salesforce Type"] != "Maintenance") then
           project.budget = sfdc_object[:X1st_year_Services_Total__c] unless helper.comparerFloat(project.budget,sfdc_object[:X1st_year_Services_Total__c],"budget")
         end
 
         # To fix problem with escaping
         # All the values are present if needed, but with URL escaping
         project.delete("DE:Salesforce ID")
-        project.delete("DE:Project Type")
+        project.delete("DE:Salesforce Type")
         project.delete("DE:Services Type")
         project.delete("DE:Practice Group")
         project.delete("DE:Service Type Subcategory")
@@ -191,7 +191,7 @@ command :update do |c|
         @work_done = true if helper.changed
 
 
-        if (sfdc_object[:X1st_year_Services_Total__c] != nil and Float(sfdc_object[:X1st_year_Services_Total__c]) != 0 and sfdc_object[:PS_Hours__c] != nil and  Float(sfdc_object[:PS_Hours__c]) != 0 and project["DE:Project Type"] != "Maintenance") then
+        if (sfdc_object[:X1st_year_Services_Total__c] != nil and Float(sfdc_object[:X1st_year_Services_Total__c]) != 0 and sfdc_object[:PS_Hours__c] != nil and  Float(sfdc_object[:PS_Hours__c]) != 0 and project["DE:Salesforce Type"] != "Maintenance") then
           budget = Float(sfdc_object[:X1st_year_Services_Total__c])
           hours = Float(sfdc_object[:PS_Hours__c])
           rateValue = budget / hours if hours > 0
@@ -484,7 +484,7 @@ command :add do |c|
       #project["templateID"] = # ?
 
       project[CGI.escape("DE:Salesforce ID")] = s[:Id].first
-      project[CGI.escape("DE:Project Type")] = s[:Type]
+      project[CGI.escape("DE:Salesforce Type")] = s[:Type]
 
       @log.info "Creating project #{project.name} with SFDC ID #{s[:Id].first}"
 
@@ -688,23 +688,112 @@ command :jira do |c|
       #puts "nenasel" if value == nil
 
 
-
-
       end
 
+    end
 
+end
+
+
+desc 'Check and fix billable hours'
+command :billable_check do |c|
+
+  c.desc 'Username to SF account'
+  c.flag [:sf_username]
+
+  c.desc 'Password + token to SF account'
+  c.flag [:sf_password]
+
+  c.desc 'Username to Attask'
+  c.flag [:at_username]
+
+  c.desc 'Password to Attask'
+  c.flag [:at_password]
+
+
+  c.action do |global_options,options,args|
+    sf_username = options[:sf_username]
+    sf_password = options[:sf_password]
+    at_username = options[:at_username]
+    at_password = options[:at_password]
+
+    attask = Attask.client("gooddata",at_username,at_password)
+
+
+    @user = {
+        "West" => "gautam.kher@gooddata.com",
+        "Partner" => "romeo.leon@gooddata.com",
+        "East" => "matt.maudlin@gooddata.com",
+        "Europe" => "martin.hapl@gooddata.com"
+    }
+
+
+    projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID",:customFields => ""})
+    users = attask.user.search()
+    companies = attask.company.search(({:fields => "ID,name"}))
+
+    salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
+    salesforce.query("SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId],:as_hash => true})
+
+
+    account = Synchronizer::SalesForce.new(sf_username,sf_password)
+    account.query("SELECT Id, Name FROM Account",{:values => [:Id,:Name],:as_hash => true})
+
+    projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil }
+
+    # This section will create warn messages, when there is incorectly set opportunity in SFDC
+    salesforce.filter("6 - CLOSED WON")
+    salesforce.notAlreadyCreated(projects)
+
+    salesforce.output.each do |s|
+
+      project = Attask::Project.new()
+      project.name =  s[:Name].match(/^[^->]*/)[0].strip
+      project.status = "IDA"
+
+
+      accountName = account.output.find{|a| a[:Id].first == s[:AccountId]}[:Name]
+
+      company = companies.find{|c| c.name.casecmp(accountName) == 0 ? true : false}
+      if (company == nil) then
+        company = Attask::Company.new
+        company["name"] = accountName
+        @log.info "Creating company #{company["name"]}"
+        company = attask.company.add(company).first
+      end
+
+      user = nil
+      if (s[:Practice_Group__c] != nil)
+        email = @user[s[:Practice_Group__c]]
+        user = users.find{|u| u.emailAddr == email}
+      end
+
+      project.ownerID = user.ID if user != nil
+      project["companyID"] =  company.ID
+      project["categoryID"] = "50f5a7ee000d0278de51cc3a4d803e62"
+      project["groupID"] = "50f49e85000893b820341d23978dd05b"
+      project["scheduleID"] = "50f558520003e0c8c8d1290e0d051571"
+      project["milestonePathID"] = "50f5e5be001a53c6b9027b25d7b00854"
+      project["ownerPrivileges"] = "APT"
+      project["URL"] = "https://na6.salesforce.com/#{s[:Id].first}" if s[:Id].first != nil
+
+      #project["templateID"] = # ?
+
+      project[CGI.escape("DE:Salesforce ID")] = s[:Id].first
+      project[CGI.escape("DE:Salesforce Type")] = s[:Type]
+
+      @log.info "Creating project #{project.name} with SFDC ID #{s[:Id].first}"
+
+      attask.project.add(project)
+      @work_done = true
     end
 
 
 
 
 
-
-
-
+  end
 end
-
-
 
 
 
