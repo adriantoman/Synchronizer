@@ -157,7 +157,6 @@ command :update do |c|
 
 
           if (project["DE:Project Type"] != "Maintenance" and project["DE:Project Type"] != "Migration" and project["DE:Project Type"] != "Customer Success" ) then
-            project[CGI.escape("DE:Project Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Project Type"],sfdc_object[:Type],"Project Type")
             project[CGI.escape("DE:Practice Group")] = sfdc_object[:Practice_Group__c] unless helper.comparerString(project["DE:Practice Group"],sfdc_object[:Practice_Group__c],"Practice Group")
           end
 
@@ -488,7 +487,7 @@ command :add do |c|
       #project["templateID"] = # ?
 
       project[CGI.escape("DE:Salesforce ID")] = s[:Id].first
-      project[CGI.escape("DE:Project Type")] = s[:Type]
+      project[CGI.escape("DE:Project Type")] = "Implementation"
       project[CGI.escape("DE:Salesforce Type")] = s[:Type]
 
       @log.info "Creating project #{project.name} with SFDC ID #{s[:Id].first}"
