@@ -121,7 +121,7 @@ command :update do |c|
     attask = Attask.client("gooddata",at_username,at_password)
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
-    projects = attask.project.search({:fields => "ID,name,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Salesforce Type,DE:Practice Group,DE:Services Type,DE:Service Type Subcategory"})
+    projects = attask.project.search({:fields => "ID,name,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Practice Group,DE:Services Type,DE:Service Type Subcategory"})
 
 
     salesforce = Synchronizer::SalesForce.new( sf_username,sf_password)
@@ -142,8 +142,8 @@ command :update do |c|
         sfdc_object  = sfdc_object.first
 
         if (project["DE:Salesforce ID"].casecmp("0068000000gubcKAAQ") == 0) then
-          if (project["DE:Salesforce Type"] != "Maintenance" and project["DE:Salesforce Type"] != "Migration" and project["DE:Salesforce Type"] != "Customer Success" ) then
-            project[CGI.escape("DE:Salesforce Type")] = "Internal" unless helper.comparerString(project["DE:Salesforce Type"],"Internal","Salesforce Type")
+          if (project["DE:Project Type"] != "Maintenance" and project["DE:Project Type"] != "Migration" and project["DE:Project Type"] != "Customer Success" ) then
+            project[CGI.escape("DE:Project Type")] = "Internal" unless helper.comparerString(project["DE:Project Type"],"Internal","Project Type")
             project[CGI.escape("DE:Practice Group")] = "Europe" unless helper.comparerString(project["DE:Practice Group"],"Europe","Practice Group")
           end
 
@@ -153,8 +153,11 @@ command :update do |c|
         else
           # UPDATE CONDITIONS -> Every time
 
-          if (project["DE:Salesforce Type"] != "Maintenance" and project["DE:Salesforce Type"] != "Migration" and project["DE:Salesforce Type"] != "Customer Success" ) then
-            project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Type],"Salesforce Type")
+          project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Type],"Salesforce Type")
+
+
+          if (project["DE:Project Type"] != "Maintenance" and project["DE:Project Type"] != "Migration" and project["DE:Project Type"] != "Customer Success" ) then
+            project[CGI.escape("DE:Project Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Project Type"],sfdc_object[:Type],"Project Type")
             project[CGI.escape("DE:Practice Group")] = sfdc_object[:Practice_Group__c] unless helper.comparerString(project["DE:Practice Group"],sfdc_object[:Practice_Group__c],"Practice Group")
           end
 
@@ -172,16 +175,16 @@ command :update do |c|
 
 
         # Update budget if there is only one project with specific SFDC_ID
-        duplicated_sfdc = projects.find_all{|p| p["DE:Salesforce ID"] != nil and project["DE:Salesforce ID"] != nil and project["DE:Salesforce Type"] != "Maintenance" and p["DE:Salesforce ID"].casecmp(project["DE:Salesforce ID"]) == 0 ? true : false}
+        duplicated_sfdc = projects.find_all{|p| p["DE:Salesforce ID"] != nil and project["DE:Salesforce ID"] != nil and project["DE:Project Type"] != "Maintenance" and p["DE:Salesforce ID"].casecmp(project["DE:Salesforce ID"]) == 0 ? true : false}
 
-        if (duplicated_sfdc.count == 1 and sfdc_object[:X1st_year_Services_Total__c] != nil and project["DE:Salesforce Type"] != "Maintenance") then
+        if (duplicated_sfdc.count == 1 and sfdc_object[:X1st_year_Services_Total__c] != nil and project["DE:Project Type"] != "Maintenance") then
           project.budget = sfdc_object[:X1st_year_Services_Total__c] unless helper.comparerFloat(project.budget,sfdc_object[:X1st_year_Services_Total__c],"budget")
         end
 
         # To fix problem with escaping
         # All the values are present if needed, but with URL escaping
         project.delete("DE:Salesforce ID")
-        project.delete("DE:Salesforce Type")
+        project.delete("DE:Project Type")
         project.delete("DE:Services Type")
         project.delete("DE:Practice Group")
         project.delete("DE:Service Type Subcategory")
@@ -191,7 +194,7 @@ command :update do |c|
         @work_done = true if helper.changed
 
 
-        if (sfdc_object[:X1st_year_Services_Total__c] != nil and Float(sfdc_object[:X1st_year_Services_Total__c]) != 0 and sfdc_object[:PS_Hours__c] != nil and  Float(sfdc_object[:PS_Hours__c]) != 0 and project["DE:Salesforce Type"] != "Maintenance") then
+        if (sfdc_object[:X1st_year_Services_Total__c] != nil and Float(sfdc_object[:X1st_year_Services_Total__c]) != 0 and sfdc_object[:PS_Hours__c] != nil and  Float(sfdc_object[:PS_Hours__c]) != 0 and project["DE:Project Type"] != "Maintenance") then
           budget = Float(sfdc_object[:X1st_year_Services_Total__c])
           hours = Float(sfdc_object[:PS_Hours__c])
           rateValue = budget / hours if hours > 0
@@ -484,6 +487,7 @@ command :add do |c|
       #project["templateID"] = # ?
 
       project[CGI.escape("DE:Salesforce ID")] = s[:Id].first
+      project[CGI.escape("DE:Project Type")] = s[:Type]
       project[CGI.escape("DE:Salesforce Type")] = s[:Type]
 
       @log.info "Creating project #{project.name} with SFDC ID #{s[:Id].first}"
@@ -780,7 +784,7 @@ command :billable_check do |c|
       #project["templateID"] = # ?
 
       project[CGI.escape("DE:Salesforce ID")] = s[:Id].first
-      project[CGI.escape("DE:Salesforce Type")] = s[:Type]
+      project[CGI.escape("DE:Project Type")] = s[:Type]
 
       @log.info "Creating project #{project.name} with SFDC ID #{s[:Id].first}"
 
