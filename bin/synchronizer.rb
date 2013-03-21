@@ -185,6 +185,7 @@ command :update do |c|
         # All the values are present if needed, but with URL escaping
         project.delete("DE:Salesforce ID")
         project.delete("DE:Project Type")
+        project.delete("DE:Salesforce Type")
         project.delete("DE:Services Type")
         project.delete("DE:Practice Group")
         project.delete("DE:Service Type Subcategory")
