@@ -483,6 +483,7 @@ command :add do |c|
       project["milestonePathID"] = "50f5e5be001a53c6b9027b25d7b00854"
       project["ownerPrivileges"] = "APT"
       project["URL"] = "https://na6.salesforce.com/#{s[:Id].first}" if s[:Id].first != nil
+      project[CGI.escape("DE:Budget Hours")] =  s[:PS_Hours__c]
 
       #project["templateID"] = # ?
 
@@ -795,6 +796,67 @@ command :billable_check do |c|
 
 
 
+
+  end
+end
+
+
+
+desc 'Add new projects to SF'
+command :update_ps_hours do |c|
+
+  c.desc 'Username to SF account'
+  c.flag [:sf_username]
+
+  c.desc 'Password + token to SF account'
+  c.flag [:sf_password]
+
+  c.desc 'Username to Attask'
+  c.flag [:at_username]
+
+  c.desc 'Password to Attask'
+  c.flag [:at_password]
+
+
+  c.action do |global_options,options,args|
+    sf_username = options[:sf_username]
+    sf_password = options[:sf_password]
+    at_username = options[:at_username]
+    at_password = options[:at_password]
+
+    attask = Attask.client("gooddata",at_username,at_password)
+
+    projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID",:customFields => ""})
+    users = attask.user.search()
+    companies = attask.company.search(({:fields => "ID,name"}))
+
+    salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
+    salesforce.query("SELECT Id,ps_hours__c FROM Opportunity",{:values => [:Id,:ps_hours__c],:as_hash => true})
+
+    projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil }
+
+    hours = []
+
+    FasterCSV.foreach("/home/adrian.toman/import/hours.csv", :quote_char => '"', :col_sep =>',', :row_sep =>:auto, :headers => true) do |row|
+      hours << row
+    end
+
+    projects.each do |project|
+      element = hours.find{|value| value["projectid"] == project["ID"]}
+
+      if  (!element.nil?)
+        sf_element = salesforce.output.find{|s| s[:Id].first == project["DE:Salesforce ID"]}
+        if (!sf_element.nil? && !sf_element.empty?)
+            value_hours = Float(element["sum"])
+            value_ps_hours = Float(sf_element[:PS_Hours__c])
+
+            project[CGI.escape("DE:Budget Hours")] =  value_ps_hours - value_hours
+            project.delete("DE:Salesforce ID")
+            puts "I have found hours: #{value_hours} and in SFDC is #{value_ps_hours}"
+            attask.project.update(project)
+        end
+      end
+    end
 
   end
 end
