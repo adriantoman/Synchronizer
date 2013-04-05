@@ -121,12 +121,12 @@ command :update do |c|
     attask = Attask.client("gooddata",at_username,at_password)
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
-    projects = attask.project.search({:fields => "ID,name,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Practice Group,DE:Services Type,DE:Service Type Subcategory"})
+    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Practice Group,DE:Services Type,DE:Service Type Subcategory,DE:Salesforce Name"})
 
 
     salesforce = Synchronizer::SalesForce.new( sf_username,sf_password)
 
-    salesforce.query("SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type],:as_hash => true})
+    salesforce.query("SELECT Amount, Id,Name, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:Name],:as_hash => true})
 
     count = 0
 
@@ -154,6 +154,7 @@ command :update do |c|
           # UPDATE CONDITIONS -> Every time
 
           project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Type],"Salesforce Type")
+          project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Name] unless helper.comparerString(project["DE:DE:Salesforce Name"],sfdc_object[:Type],"DE:Salesforce Name")
 
 
           if (project["DE:Project Type"] != "Maintenance" and project["DE:Project Type"] != "Migration" and project["DE:Project Type"] != "Customer Success" ) then
@@ -185,9 +186,11 @@ command :update do |c|
         project.delete("DE:Salesforce ID")
         project.delete("DE:Project Type")
         project.delete("DE:Salesforce Type")
+        project.delete("DE:Salesforce Name")
         project.delete("DE:Services Type")
         project.delete("DE:Practice Group")
         project.delete("DE:Service Type Subcategory")
+
 
         attask.project.update(project) if helper.changed
         helper.printLog(@log) if helper.changed
@@ -847,7 +850,7 @@ command :update_ps_hours do |c|
       if  (!element.nil?)
         sf_element = salesforce.output.find{|s| s[:Id].first == project["DE:Salesforce ID"]}
         if (!sf_element.nil? && !sf_element.empty?)
-            value_hours = Float(element["sum"])
+            value_hours = Float(element["budget_remaining_after_20130210"])
             value_ps_hours = Float(sf_element[:PS_Hours__c])
 
             project[CGI.escape("DE:Budget Hours")] =  value_ps_hours - value_hours
