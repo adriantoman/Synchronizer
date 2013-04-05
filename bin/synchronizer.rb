@@ -19,6 +19,7 @@ require 'cgi'
 require 'active_support/all'
 require 'logger'
 require "pony"
+require "csv"
 include GLI
 
 program_desc 'Program for synchronizing task'
@@ -829,7 +830,7 @@ command :update_ps_hours do |c|
 
     attask = Attask.client("gooddata",at_username,at_password)
 
-    projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID",:customFields => ""})
+    projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID,DE:Project Type",:customFields => ""})
     users = attask.user.search()
     companies = attask.company.search(({:fields => "ID,name"}))
 
@@ -837,27 +838,43 @@ command :update_ps_hours do |c|
     salesforce.query("SELECT Id,ps_hours__c FROM Opportunity",{:values => [:Id,:ps_hours__c],:as_hash => true})
 
     projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil }
+    projects = projects.find_all{|p|  p["DE:Project Type"] == "Implementation" }
 
     hours = []
 
-    FasterCSV.foreach("/home/adrian.toman/import/hours.csv", :quote_char => '"', :col_sep =>',', :row_sep =>:auto, :headers => true) do |row|
-      hours << row
+
+    csv = CSV.open("/home/adrian.toman/import/hours.csv",'r', :headers => true)
+
+    csv.each do |row|
+      temp = [row[0].split(",")[0],row[0].split(",")[1],row[0].split(",")[2]]
+      hours << temp
     end
 
+    #FasterCSV.foreach("/home/adrian.toman/import/hours2.csv", :quote_char => '"',:col_sep =>',', :headers => true) do |row|
+    #  pp row
+
+    #  hours << row if row !=nil
+    #end
+
     projects.each do |project|
-      element = hours.find{|value| value["projectid"] == project["ID"]}
+      element = hours.find{|value| value[0] == project["ID"]}
 
-      if  (!element.nil?)
-        sf_element = salesforce.output.find{|s| s[:Id].first == project["DE:Salesforce ID"]}
-        if (!sf_element.nil? && !sf_element.empty?)
-            value_hours = Float(element["budget_remaining_after_20130210"])
-            value_ps_hours = Float(sf_element[:PS_Hours__c])
 
-            project[CGI.escape("DE:Budget Hours")] =  value_ps_hours - value_hours
-            project.delete("DE:Salesforce ID")
-            puts "I have found hours: #{value_hours} and in SFDC is #{value_ps_hours}"
-            attask.project.update(project)
-        end
+      sf_element = salesforce.output.find{|s| s[:Id].first == project["DE:Salesforce ID"]}
+      if (!sf_element.nil? && !sf_element.empty?)
+
+         if element != nil
+            value_hours = Float(element[2])
+         else
+            value_hours = 0
+         end
+         value_ps_hours = Float(sf_element[:PS_Hours__c])
+
+         project[CGI.escape("DE:Budget Hours")] =  value_ps_hours - value_hours
+         project.delete("DE:Salesforce ID")
+         project.delete("DE:Project Type")
+         puts "I have found hours: #{value_hours} and in SFDC is #{value_ps_hours} and I am setting #{value_ps_hours - value_hours}"
+         attask.project.update(project)
       end
     end
 
@@ -889,8 +906,10 @@ post do |global,command,options,args|
 end
 
 on_error do |exception|
-  @log.error exception
-  @log.error exception.backtrace
+  #@log.error exception
+  #@log.error exception.backtrace
+  pp exception
+  pp exception.backtrace
   #@log.close
   #Pony.mail(:to => "clover@gooddata.pagerduty.com",:cc => "adrian.toman@gooddata.com", :from => 'adrian.toman@gooddata.com', :subject => "Error in SF => Attask synchronization", :body => exception.to_s) if ENV["USERNAME"] != "adrian.toman"
 
