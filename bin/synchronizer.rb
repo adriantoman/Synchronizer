@@ -188,7 +188,7 @@ command :update do |c|
 
         # To fix problem with escaping
         # All the values are present if needed, but with URL escaping
-        pp project
+        #pp project
 
         project.delete("DE:Salesforce ID")
         project.delete("DE:Project Type")
