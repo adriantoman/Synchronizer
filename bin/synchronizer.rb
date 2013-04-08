@@ -124,10 +124,15 @@ command :update do |c|
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
     projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Practice Group,DE:Services Type,DE:Service Type Subcategory,DE:Salesforce Name"})
 
+    puts "Attask loaded"
+
 
     salesforce = Synchronizer::SalesForce.new( sf_username,sf_password)
 
     salesforce.query("SELECT Amount, Id, Name, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c FROM Opportunity",{:values => [:Id,:Amount,:Name,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type],:as_hash => true})
+
+
+    puts "SF loaded"
 
     count = 0
 
@@ -155,8 +160,7 @@ command :update do |c|
           # UPDATE CONDITIONS -> Every time
 
           project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Type],"Salesforce Type")
-          project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Name],"Salesforce Name") unless sfdc_object[:Name] =~ /Redif/
-
+          #project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Name],"Salesforce Name") unless sfdc_object[:Name].include? "Redfin"
 
           if (project["DE:Project Type"] != "Maintenance" and project["DE:Project Type"] != "Migration" and project["DE:Project Type"] != "Customer Success" ) then
             project[CGI.escape("DE:Practice Group")] = sfdc_object[:Practice_Group__c] unless helper.comparerString(project["DE:Practice Group"],sfdc_object[:Practice_Group__c],"Practice Group")
@@ -194,7 +198,7 @@ command :update do |c|
         project.delete("DE:Practice Group")
         project.delete("DE:Service Type Subcategory")
 
-        pp project
+
         attask.project.update(project) if helper.changed
         helper.printLog(@log) if helper.changed
         @work_done = true if helper.changed
