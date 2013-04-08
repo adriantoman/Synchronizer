@@ -155,7 +155,7 @@ command :update do |c|
           # UPDATE CONDITIONS -> Every time
 
           project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Type],"Salesforce Type")
-          #project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Name] unless helper.comparerString(project["DE:DE:Salesforce Name"],sfdc_object[:Name],"DE:Salesforce Name")
+          project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Name],"Salesforce Name") unless sfdc_object[:Name] ~= /Redif/
 
 
           if (project["DE:Project Type"] != "Maintenance" and project["DE:Project Type"] != "Migration" and project["DE:Project Type"] != "Customer Success" ) then
@@ -184,6 +184,8 @@ command :update do |c|
 
         # To fix problem with escaping
         # All the values are present if needed, but with URL escaping
+        pp project
+
         project.delete("DE:Salesforce ID")
         project.delete("DE:Project Type")
         project.delete("DE:Salesforce Type")
@@ -192,7 +194,7 @@ command :update do |c|
         project.delete("DE:Practice Group")
         project.delete("DE:Service Type Subcategory")
 
-
+        pp project
         attask.project.update(project) if helper.changed
         helper.printLog(@log) if helper.changed
         @work_done = true if helper.changed
