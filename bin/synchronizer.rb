@@ -399,7 +399,6 @@ command :init do |c|
 
 
 
-
   end
 end
 
@@ -443,7 +442,6 @@ command :add do |c|
     salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
     salesforce.query("SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId],:as_hash => true})
 
-
     account = Synchronizer::SalesForce.new(sf_username,sf_password)
     account.query("SELECT Id, Name FROM Account",{:values => [:Id,:Name],:as_hash => true})
 
@@ -462,7 +460,6 @@ command :add do |c|
     @work_done = true  if incorectly_filled.count > 0
 
     salesforce.filter("6 - CLOSED WON")
-
     salesforce.notAlreadyCreated(projects)
 
     salesforce.output.each do |s|
@@ -825,6 +822,7 @@ command :update_ps_hours do |c|
   c.flag [:sf_password]
 
   c.desc 'Username to Attask'
+
   c.flag [:at_username]
 
   c.desc 'Password to Attask'
@@ -882,13 +880,253 @@ command :update_ps_hours do |c|
          project[CGI.escape("DE:Budget Hours")] =  value_ps_hours - value_hours
          project.delete("DE:Salesforce ID")
          project.delete("DE:Project Type")
-         puts "I have found hours: #{value_hours} and in SFDC is #{value_ps_hours} and I am setting #{value_ps_hours - value_hours}"
+         puts "I have found hours: #{value_hours} and in SFDC (#{sf_element[:Id].first}) is #{value_ps_hours} and I am setting #{value_ps_hours - value_hours}"
          attask.project.update(project)
       end
     end
 
   end
 end
+
+desc 'Add new projects to SF'
+command :move do |c|
+
+  c.desc 'Username to Attask'
+  c.flag [:at_username]
+
+  c.desc 'Password to Attask'
+  c.flag [:at_password]
+
+
+  c.action do |global_options,options,args|
+
+    at_username = options[:at_username]
+    at_password = options[:at_password]
+
+    attask = Attask.client("gooddata",at_username,at_password)
+
+    projects = attask.project.search({:fields => "ID,name,DE:Project Type,DE:CRON,DE:Project PID,DE:Project Type,DE:Running on",:customFields => ""})
+
+    pp projects.count
+
+    projects = projects.find_all{|p| p["DE:Project Type"] == "Maintenance"}
+    #projects = projects.find_all{|p| p["DE:Project PID"] == "n9fpmc1p4v1pjsd5p1jeb0j31cs767yg"}
+
+    projects.each do |p|
+      puts "Name: #{p.name} PID: #{p["DE:Project PID"]}} CRON:#{p["DE:CRON"]}"
+
+      task = Attask::Task.new()
+      task["categoryID"]= "5167fbd8000b3cd1c2d8f2e670c29f4a"
+      task["groupID"] = "511df3ee000a3646cf87f7f192fde769"
+      task["projectID"] = p["ID"]
+      task["DE:Server"] = p["DE:Running on"]
+
+
+      #pp p["DE:Running on"]
+
+      case (p["DE:Running on"])
+        when "clover-prod2":
+          task["DE:Graph"]= "app"
+          task["name"] = "Main graph"
+        when "clover-prod3":
+          task["DE:Graph"]= "app"
+          task["name"] = "Main graph"
+        when "clover-test2":
+          task["DE:Graph"]= "app"
+          task["name"] = "Main graph"
+        when "clover-dev2":
+          task["DE:Graph"]= "app"
+          task["name"] = "Main graph"
+        else
+          task["DE:Graph"]= "CHANGE"
+          task["name"] = "CHANGE"
+      end
+      task["DE:CRON"] = p["DE:CRON"]
+
+      attask.task.add(task)
+
+      #pp task
+
+
+    end
+
+    #pp tasks
+    #tasks = tasks.find_all {|t| t["categoryID"] == "5167fbd8000b3cd1c2d8f2e670c29f4a"}
+    #pp tasks
+
+
+
+
+
+
+  end
+end
+
+
+
+desc 'Add new projects to SF'
+command :pagerduty do |c|
+
+  c.desc 'Username to Attask'
+  c.flag [:at_username]
+
+  c.desc 'Password to Attask'
+  c.flag [:at_password]
+
+  c.desc 'S3 access key'
+  c.flag [:s3_access]
+
+  s.desc 'S3 secret key'
+  c.flag [:s3_secret]
+
+
+
+  c.action do |global_options,options,args|
+
+    at_username = options[:at_username]
+    at_password = options[:at_password]
+    s3_access = options[:s3_access]
+    s3_secret = options[:s3_secret]
+
+    #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
+    attask = Attask.client("gooddata",at_username,at_password)
+    begin
+      s3 = Synchronizer::S3.new(s3_access,s3_secret,"gooddata_com_attask",@log)
+
+      s3.download_file("pd_timesheet.csv")
+      s3.delete_file("pd_timesheet.csv")
+
+      pd_timesheets = FasterCSV.read("data/pd_timesheet.csv",{:headers=>true})
+
+      pd_timesheets.each do |row|
+            hour = Attask::Hour.new()
+            hour["entryDate"] = row["entrydate"]
+            hour["hours"] = row["duration"]
+            hour["hourTypeID"] = row["hourtypeid"]
+            hour["taskID"] = row["taskid"]
+            hour["timesheetID"] = row["timesheetid"]
+            hour["ownerID"] = row["ownerid"]
+            hour["roleID"] = row["roleid"]
+            attask.hour.add(hour)
+            @log.info "Created entry(Date: #{row["entrydate"]}, Hours: #{row["duration"]} Timesheet: #{hour["timesheetID"]})"
+      end
+      File.delete("data/pd_timesheet.csv")
+    rescue
+      @log.error "There was error in executing PD Migration: #{$!}"
+      Pony.mail(:to => "stanislav.vohnik@gooddata.com",:cc => "adrian.toman@gooddata.com",:from => 'attask@gooddata.com', :subject => "Attask Pagerduty - looks like that file was not exported on S3 ", :body => "Please check PD synchronization log", :attachments => {"pagerduty.log" => File.read("log/migration_pagerduty.log")} )
+    end
+
+
+  end
+end
+
+
+
+
+
+
+desc 'Add new projects to SF'
+command :update_planed_date do |c|
+
+  c.desc 'Username to SF account'
+  c.flag [:sf_username]
+
+  c.desc 'Password + token to SF account'
+  c.flag [:sf_password]
+
+  c.desc 'Username to Attask'
+
+  c.flag [:at_username]
+
+  c.desc 'Password to Attask'
+  c.flag [:at_password]
+
+
+  c.action do |global_options,options,args|
+    sf_username = options[:sf_username]
+    sf_password = options[:sf_password]
+    at_username = options[:at_username]
+    at_password = options[:at_password]
+
+    #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
+    attask = Attask.client("gooddata",at_username,at_password)
+
+
+    projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID,DE:Project Type,DE:Legacy ID,DE:Legacy,status",:customFields => ""})
+
+    salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
+    salesforce.query("SELECT Id,Services_Kick_Off_Date__c,Services_Completion_Date__c FROM Opportunity",{:values => [:Id,:Services_Kick_Off_Date__c,:Services_Completion_Date__c],:as_hash => true})
+
+    projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil }
+    projects = projects.find_all{|p|  p["DE:Legacy"] == "Yes" and p["DE:Project Type"] == "Implementation"}
+
+    projects.each do |project|
+
+      sf_element = salesforce.output.find{|s| s[:Id].first == project["DE:Salesforce ID"]}
+      if (!sf_element.nil? && !sf_element.empty?)
+
+          if (sf_element[:Services_Kick_Off_Date__c] != nil) or (sf_element[:Services_Completion_Date__c] != nil) then
+            project["plannedStartDate"] = sf_element[:Services_Kick_Off_Date__c]
+            project["actualStartDate"] = sf_element[:Services_Kick_Off_Date__c]
+
+            project.delete("DE:Salesforce ID")
+            project.delete("DE:Project Type")
+            project.delete("DE:Legacy ID")
+            project.delete("DE:Legacy")
+            attask.project.update(project)
+            puts "The project #{sf_element[:Id].first} has been updated (Start Date) #{sf_element[:Services_Kick_Off_Date__c]}"
+
+          else
+            puts "The project #{sf_element[:Id].first} has not Services_Kick_Off_Date__c in SF"
+          end
+
+          if (project.status == "CPL") then
+            if (sf_element[:Services_Completion_Date__c] != nil) then
+
+              project["status"] = "CUR"
+              attask.project.update(project)
+
+              puts "The project set to Current #{project["ID"]}"
+
+              task = Attask::Task.new()
+              #task["categoryID"]= "5167fbd8000b3cd1c2d8f2e670c29f4a"
+              #task["groupID"] = "511df3ee000a3646cf87f7f192fde769"
+              task["projectID"] = project["ID"]
+              task["name"] = "Completition of Legacy project"
+              task["description"] = "Added to edit completition date in attask"
+              #task["plannedStartDate"] = sf_element[:Services_Completion_Date__c]
+              #task["plannedCompletionDate"] = sf_element[:Services_Completion_Date__c]
+              task["actualStartDate"] = sf_element[:Services_Kick_Off_Date__c]
+              task["actualCompletionDate"] = sf_element[:Services_Completion_Date__c]
+              task["status"] = "CPL"
+              puts "The project completition date is #{sf_element[:Services_Completion_Date__c]}"
+
+              attask.task.add(task)
+
+              project["status"] = "CPL"
+              attask.project.update(project)
+
+              puts "The project set to Completed #{project["ID"]}"
+
+              #puts "The project #{sf_element[:Id].first} has been updated (Completion date) #{sf_element[:Services_Completion_Date__c]}"
+              #project["projectedCompletionDate"] = sf_element[:Services_Completion_Date__c]
+              #project["actualCompletionDate"] = sf_element[:Services_Completion_Date__c]
+              #puts "The project #{sf_element[:Id].first} has been updated (Completion date) #{sf_element[:Services_Completion_Date__c]}"
+              #attask.project.update(project)
+            else
+              puts "The project #{sf_element[:Id].first} has not Services_Completion_Date__c in SF"
+            end
+          end
+
+
+
+
+      end
+    end
+
+  end
+end
+
 
 
 
