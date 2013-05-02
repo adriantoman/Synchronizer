@@ -1013,7 +1013,7 @@ command :pagerduty do |c|
       File.delete("data/pd_timesheet.csv")
     rescue
       @log.error "There was error in executing PD Migration: #{$!}"
-      Pony.mail(:to => "stanislav.vohnik@gooddata.com",:cc => "adrian.toman@gooddata.com",:from => 'attask@gooddata.com', :subject => "Attask Pagerduty - looks like that file was not exported on S3 ", :body => "Please check PD synchronization log", :attachments => {"pagerduty.log" => File.read("log/migration_pagerduty.log")} )
+      Pony.mail(:to => "adrian.toman@gooddata.com",:cc => "miloslav.zientek@gooddata.com",:from => 'attask@gooddata.com', :subject => "Attask Pagerduty - looks like that file was not exported on S3 ", :body => "Please check PD synchronization log", :attachments => {"pagerduty.log" => File.read("log/migration_pagerduty.log")} )
     end
 
 
