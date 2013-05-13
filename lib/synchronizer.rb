@@ -65,15 +65,33 @@ module Synchronizer
     end
 
     def filter(value)
-      @output = @output.find_all {|s| s[:StageName] == value and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) > 0}
+      @output = @output.find_all do |s|
+        if (s[:X1st_year_Services_Total__c].nil?) or (s[:PS_Hours__c].nil?)
+          false
+        else
+          s[:StageName] == value and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) > 0
+        end
+      end
     end
 
     def filter_out(value)
-      @output.find_all {|s| s[:StageName] == value and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) > 0}
+      @output.find_all do |s|
+        if (s[:X1st_year_Services_Total__c].nil?) or (s[:PS_Hours__c].nil?)
+          false
+        else
+          s[:StageName] == value and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) > 0
+        end
+      end
     end
 
     def filter_out_without_control(value)
-      @output.find_all {|s| s[:StageName] == value and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) == 0}
+      @output.find_all do |s|
+        if (s[:X1st_year_Services_Total__c].nil?) or (s[:PS_Hours__c].nil?)
+          false
+        else
+          s[:StageName] == value and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) == 0
+        end
+      end
     end
 
 

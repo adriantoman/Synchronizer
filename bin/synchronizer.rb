@@ -1043,6 +1043,8 @@ command :update_planed_date do |c|
 
 
   c.action do |global_options,options,args|
+    puts "KOkos"
+
     sf_username = options[:sf_username]
     sf_password = options[:sf_password]
     at_username = options[:at_username]
@@ -1052,76 +1054,129 @@ command :update_planed_date do |c|
     attask = Attask.client("gooddata",at_username,at_password)
 
 
-    projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID,DE:Project Type,DE:Legacy ID,DE:Legacy,status",:customFields => ""})
+    puts "KOkos"
 
-    salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
-    salesforce.query("SELECT Id,Services_Kick_Off_Date__c,Services_Completion_Date__c FROM Opportunity",{:values => [:Id,:Services_Kick_Off_Date__c,:Services_Completion_Date__c],:as_hash => true})
+    projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID,DE:Project Type,DE:Legacy ID,DE:Legacy,status",:customFields => ""})
+    tasks = attask.task.search({:fields => "ID,name,projectID"})
+
+    completion_dates = FasterCSV.read("/home/adrian.toman/import/update_actualcompletion_date.csv",{:headers=>true})
+    planedstart_dates = FasterCSV.read("/home/adrian.toman/import/update_planedstart_date.csv",{:headers=>true})
 
     projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil }
     projects = projects.find_all{|p|  p["DE:Legacy"] == "Yes" and p["DE:Project Type"] == "Implementation"}
 
     projects.each do |project|
 
-      sf_element = salesforce.output.find{|s| s[:Id].first == project["DE:Salesforce ID"]}
-      if (!sf_element.nil? && !sf_element.empty?)
+        task = tasks.find {|t| t["projectID"] == project["ID"] and (t["name"] == "Completition of Legacy project" or t["name"] == "Completition of Legacy project - Jira") }
 
-          if (sf_element[:Services_Kick_Off_Date__c] != nil) or (sf_element[:Services_Completion_Date__c] != nil) then
-            project["plannedStartDate"] = sf_element[:Services_Kick_Off_Date__c]
-            project["actualStartDate"] = sf_element[:Services_Kick_Off_Date__c]
+        if (task.nil?)
+          completition_date = completion_dates.find {|c| c["nm"] == project["DE:Legacy ID"]}
+          start_date = planedstart_dates.find {|c| c["nm"] == project["DE:Legacy ID"]}
+          if (!start_date.nil?)
+                  puts "Working with: #{project["ID"]}"
 
-            project.delete("DE:Salesforce ID")
-            project.delete("DE:Project Type")
-            project.delete("DE:Legacy ID")
-            project.delete("DE:Legacy")
-            attask.project.update(project)
-            puts "The project #{sf_element[:Id].first} has been updated (Start Date) #{sf_element[:Services_Kick_Off_Date__c]}"
+                  project["plannedStartDate"] = start_date["jira"]
+                  project["actualStartDate"] = start_date["jira"]
 
-          else
-            puts "The project #{sf_element[:Id].first} has not Services_Kick_Off_Date__c in SF"
-          end
+                  project.delete("DE:Salesforce ID")
+                  project.delete("DE:Project Type")
+                  project.delete("DE:Legacy ID")
+                  project.delete("DE:Legacy")
+                  attask.project.update(project)
+                  puts "The project #{project["ID"]} has been updated (Start Date) #{start_date["jira"]}"
+            if (!completition_date.nil? and project["status"] == "CPL" )
 
-          if (project.status == "CPL") then
-            if (sf_element[:Services_Completion_Date__c] != nil) then
+                      project["status"] = "CUR"
+                      attask.project.update(project)
 
-              project["status"] = "CUR"
-              attask.project.update(project)
+                      puts "The project set to Current #{project["ID"]}"
 
-              puts "The project set to Current #{project["ID"]}"
+                      task = Attask::Task.new()
+                      task["projectID"] = project["ID"]
+                      task["name"] = "Completition of Legacy project - Jira"
+                      task["description"] = "Added to edit completition date in attask"
+                      task["actualStartDate"] = start_date["jira"]
+                      task["actualCompletionDate"] = completition_date["jira"]
+                      task["status"] = "CPL"
+                      puts "The project completition date is #{completition_date["jira"]}"
 
-              task = Attask::Task.new()
-              #task["categoryID"]= "5167fbd8000b3cd1c2d8f2e670c29f4a"
-              #task["groupID"] = "511df3ee000a3646cf87f7f192fde769"
-              task["projectID"] = project["ID"]
-              task["name"] = "Completition of Legacy project"
-              task["description"] = "Added to edit completition date in attask"
-              #task["plannedStartDate"] = sf_element[:Services_Completion_Date__c]
-              #task["plannedCompletionDate"] = sf_element[:Services_Completion_Date__c]
-              task["actualStartDate"] = sf_element[:Services_Kick_Off_Date__c]
-              task["actualCompletionDate"] = sf_element[:Services_Completion_Date__c]
-              task["status"] = "CPL"
-              puts "The project completition date is #{sf_element[:Services_Completion_Date__c]}"
+                      attask.task.add(task)
 
-              attask.task.add(task)
+                      project["status"] = "CPL"
+                      attask.project.update(project)
 
-              project["status"] = "CPL"
-              attask.project.update(project)
+                      puts "The project set to Completed #{project["ID"]}"
 
-              puts "The project set to Completed #{project["ID"]}"
-
-              #puts "The project #{sf_element[:Id].first} has been updated (Completion date) #{sf_element[:Services_Completion_Date__c]}"
-              #project["projectedCompletionDate"] = sf_element[:Services_Completion_Date__c]
-              #project["actualCompletionDate"] = sf_element[:Services_Completion_Date__c]
-              #puts "The project #{sf_element[:Id].first} has been updated (Completion date) #{sf_element[:Services_Completion_Date__c]}"
-              #attask.project.update(project)
-            else
-              puts "The project #{sf_element[:Id].first} has not Services_Completion_Date__c in SF"
             end
+          else
+            puts "Jo projectID #{project["ID"]} nema v souboru"
           end
+        end
 
 
 
 
-      end
+
+
+      #if (!sf_element.nil? && !sf_element.empty?)
+      #
+      #    if (sf_element[:Services_Kick_Off_Date__c] != nil) or (sf_element[:Services_Completion_Date__c] != nil) then
+      #      project["plannedStartDate"] = sf_element[:Services_Kick_Off_Date__c]
+      #      project["actualStartDate"] = sf_element[:Services_Kick_Off_Date__c]
+      #
+      #      project.delete("DE:Salesforce ID")
+      #      project.delete("DE:Project Type")
+      #      project.delete("DE:Legacy ID")
+      #      project.delete("DE:Legacy")
+      #      attask.project.update(project)
+      #      puts "The project #{sf_element[:Id].first} has been updated (Start Date) #{sf_element[:Services_Kick_Off_Date__c]}"
+      #
+      #    else
+      #      puts "The project #{sf_element[:Id].first} has not Services_Kick_Off_Date__c in SF"
+      #    end
+      #
+      #    if (project.status == "CPL") then
+      #      if (sf_element[:Services_Completion_Date__c] != nil) then
+      #
+      #        project["status"] = "CUR"
+      #        attask.project.update(project)
+      #
+      #        puts "The project set to Current #{project["ID"]}"
+      #
+      #        task = Attask::Task.new()
+      #        #task["categoryID"]= "5167fbd8000b3cd1c2d8f2e670c29f4a"
+      #        #task["groupID"] = "511df3ee000a3646cf87f7f192fde769"
+      #        task["projectID"] = project["ID"]
+      #        task["name"] = "Completition of Legacy project"
+      #        task["description"] = "Added to edit completition date in attask"
+      #        #task["plannedStartDate"] = sf_element[:Services_Completion_Date__c]
+      #        #task["plannedCompletionDate"] = sf_element[:Services_Completion_Date__c]
+      #        task["actualStartDate"] = sf_element[:Services_Kick_Off_Date__c]
+      #        task["actualCompletionDate"] = sf_element[:Services_Completion_Date__c]
+      #        task["status"] = "CPL"
+      #        puts "The project completition date is #{sf_element[:Services_Completion_Date__c]}"
+      #
+      #        attask.task.add(task)
+      #
+      #        project["status"] = "CPL"
+      #        attask.project.update(project)
+      #
+      #        puts "The project set to Completed #{project["ID"]}"
+      #
+      #        #puts "The project #{sf_element[:Id].first} has been updated (Completion date) #{sf_element[:Services_Completion_Date__c]}"
+      #        #project["projectedCompletionDate"] = sf_element[:Services_Completion_Date__c]
+      #        #project["actualCompletionDate"] = sf_element[:Services_Completion_Date__c]
+      #        #puts "The project #{sf_element[:Id].first} has been updated (Completion date) #{sf_element[:Services_Completion_Date__c]}"
+      #        #attask.project.update(project)
+      #      else
+      #        puts "The project #{sf_element[:Id].first} has not Services_Completion_Date__c in SF"
+      #      end
+      #    end
+      #
+      #
+      #
+      #
+      #end
     end
 
   end
@@ -1132,7 +1187,8 @@ end
 
 pre do |global,command,options,args|
   next true if command.nil?
-  @log = Logger.new("log/migration_#{command.name}.log",'daily')
+  #@log = Logger.new("log/migration_#{command.name}.log",'daily')
+  @log = Logger.new(STDOUT,'daily')
   @work_done = false
 
 
