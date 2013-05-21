@@ -424,8 +424,8 @@ command :add do |c|
     at_username = options[:at_username]
     at_password = options[:at_password]
 
+    #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
     attask = Attask.client("gooddata",at_username,at_password)
-
 
     @user = {
         "West" => "gautam.kher@gooddata.com",
@@ -435,7 +435,8 @@ command :add do |c|
     }
 
 
-    projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID",:customFields => ""})
+    projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID,DE:Product ID",:customFields => ""})
+    #projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID",:customFields => ""})
     users = attask.user.search()
     companies = attask.company.search(({:fields => "ID,name"}))
 
@@ -445,45 +446,73 @@ command :add do |c|
     account = Synchronizer::SalesForce.new(sf_username,sf_password)
     account.query("SELECT Id, Name FROM Account",{:values => [:Id,:Name],:as_hash => true})
 
-    projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil }
+    pricebookentry = Synchronizer::SalesForce.new(sf_username,sf_password)
+    pricebookentry.query("SELECT Id, Product2Id FROM PricebookEntry",{:values => [:Id,:Product2Id],:as_hash => true})
+    pricebookentry = pricebookentry.output
 
-    # This section will create warn messages, when there is incorectly set opportunity in SFDC
-    incorectly_filled = salesforce.filter_out_without_control("6 - CLOSED WON")
-    incorectly_filled = salesforce.notAlreadyCreated_out(incorectly_filled,projects)
+    products = Synchronizer::SalesForce.new(sf_username,sf_password)
+    products.query("SELECT Id,Name FROM Product2",{:values => [:Id,:Name],:as_hash => true})
+    products = products.output
 
-    @log.info "There are some oportunities with services but without PS hours" if incorectly_filled.count > 0
-    incorectly_filled.each do |i|
-      @log.info "--------------------------------"
-      @log.info "SFDC name:#{i[:Name]} SFDC id:#{i[:Id].first}"
-      @log.info "--------------------------------"
-    end
-    @work_done = true  if incorectly_filled.count > 0
 
+    opportunityLineItem = Synchronizer::SalesForce.new(sf_username,sf_password)
+    opportunityLineItem.query("SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId FROM OpportunityLineItem",{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId],:as_hash => true})
+    opportunityLineItem_data = opportunityLineItem.output
+
+    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0 }
     salesforce.filter("6 - CLOSED WON")
-    salesforce.notAlreadyCreated(projects)
-
-    salesforce.output.each do |s|
-
-      project = Attask::Project.new()
-      project.name =  s[:Name].match(/^[^->]*/)[0].strip
-      project.status = "IDA"
+    salesforce_data = salesforce.output
 
 
-      accountName = account.output.find{|a| a[:Id].first == s[:AccountId]}[:Name]
+
+    opportunityLineItem_data.each do |li|
+      s = salesforce_data.find{|s| s[:Id].first == li[:OpportunityId]}
+      li[:Opportunity] = s
+      pe = pricebookentry.find do |e|
+        e[:Id].first == li[:PricebookEntryId]
+      end
+      product = products.find do |p|
+        p[:Id].first == pe[:Product2Id]
+      end
+      li[:Product] = product
+    end
+
+    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Opportunity] != nil}
+
+    # Find all product which were not created already
+    opportunityLineItem_data = opportunityLineItem_data.find_all do |li|
+      project = projects.find {|p| !p["DE:Product ID"].nil? and p["DE:Product ID"].casecmp(li[:Id].first) == 0 ? true : false}
+      if (project.nil?)
+        true
+      else
+        false
+      end
+    end
+
+
+    count = 0
+
+    opportunityLineItem_data.each do |li|
+
+
+      accountName = account.output.find{|a| a[:Id].first == li[:Opportunity][:AccountId]}[:Name]
 
       company = companies.find{|c| c.name.casecmp(accountName) == 0 ? true : false}
       if (company == nil) then
-        company = Attask::Company.new
-        company["name"] = accountName
-        @log.info "Creating company #{company["name"]}"
-        company = attask.company.add(company).first
+         company = Attask::Company.new
+         company["name"] = accountName
+         @log.info "Creating company #{company["name"]}"
+         company = attask.company.add(company).first
       end
 
-      user = nil
-      if (s[:Practice_Group__c] != nil)
-        email = @user[s[:Practice_Group__c]]
-        user = users.find{|u| u.emailAddr == email}
-      end
+      user = users.find{|u| u.emailAddr == "romeo.leon@gooddata.com"}
+
+      project = Attask::Project.new()
+      project[CGI.escape("DE:Product ID")] = li[:Id].first
+      project.name =  li[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + li[:Product][:Name]
+      project[CGI.escape("DE:Budget Hours")] =  li[:Total_Service_Hours__c]
+      project[CGI.escape("DE:Total Service Hours")] = li[:Total_Service_Hours__c]
+      project.status = "IDA"
 
       project.ownerID = user.ID if user != nil
       project["companyID"] =  company.ID
@@ -492,25 +521,25 @@ command :add do |c|
       project["scheduleID"] = "50f558520003e0c8c8d1290e0d051571"
       project["milestonePathID"] = "50f5e5be001a53c6b9027b25d7b00854"
       project["ownerPrivileges"] = "APT"
-      project["URL"] = "https://na6.salesforce.com/#{s[:Id].first}" if s[:Id].first != nil
-      project[CGI.escape("DE:Budget Hours")] =  s[:PS_Hours__c]
 
-      #project["templateID"] = # ?
-
-      project[CGI.escape("DE:Salesforce ID")] = s[:Id].first
+      project["URL"] = "https://na6.salesforce.com/#{li[:Id].first}" if li[:Id].first != nil
+      project[CGI.escape("DE:Salesforce ID")] = li[:Opportunity][:Id].first
       project[CGI.escape("DE:Project Type")] = "Implementation"
-      project[CGI.escape("DE:Salesforce Type")] = s[:Type]
 
-      @log.info "Creating project #{project.name} with SFDC ID #{s[:Id].first}"
+      project[CGI.escape("DE:Hours per Period")] = li[:Service_Hours_per_Period__c]
+      project[CGI.escape("DE:Number of Periods")] = li[:Number_of_Periods__c]
+      project[CGI.escape("DE:Expiration Period")] = li[:Expiration_Period__c]
+
+      project[CGI.escape("DE:Salesforce Type")] = li[:Opportunity][:Type]
+
+      @log.info "Creating project #{project.name} with SFDC ID #{li[:Id].first}"
 
       attask.project.add(project)
       @work_done = true
+      count = count + 1
+
+
     end
-
-
-
-
-
   end
 end
 
@@ -1050,41 +1079,45 @@ command :update_planed_date do |c|
     at_username = options[:at_username]
     at_password = options[:at_password]
 
-    #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
-    attask = Attask.client("gooddata",at_username,at_password)
+    attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
+    #attask = Attask.client("gooddata",at_username,at_password)
 
-
-    puts "KOkos"
-
-    projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID,DE:Project Type,DE:Legacy ID,DE:Legacy,status",:customFields => ""})
+    projects = attask.project.search({:fields => "ID,name,DE:Project Type,DE:Legacy ID,DE:Legacy,status",:customFields => ""})
     tasks = attask.task.search({:fields => "ID,name,projectID"})
 
-    completion_dates = FasterCSV.read("/home/adrian.toman/import/update_actualcompletion_date.csv",{:headers=>true})
-    planedstart_dates = FasterCSV.read("/home/adrian.toman/import/update_planedstart_date.csv",{:headers=>true})
+    start_only = FasterCSV.read("/home/adrian.toman/import/ActualStartDate_only.csv",{:headers=>true})
+    completed = FasterCSV.read("/home/adrian.toman/import/Completed_Project_ ActualStartDate_CompletionDate.csv",{:headers=>true})
 
-    projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil }
     projects = projects.find_all{|p|  p["DE:Legacy"] == "Yes" and p["DE:Project Type"] == "Implementation"}
 
     projects.each do |project|
-
-        task = tasks.find {|t| t["projectID"] == project["ID"] and (t["name"] == "Completition of Legacy project" or t["name"] == "Completition of Legacy project - Jira") }
+         task = tasks.find {|t| t["projectID"] == project["ID"] and (t["name"] == "Completition of Legacy project" or t["name"] == "Completition of Legacy project - Jira") }
 
         if (task.nil?)
-          completition_date = completion_dates.find {|c| c["nm"] == project["DE:Legacy ID"]}
-          start_date = planedstart_dates.find {|c| c["nm"] == project["DE:Legacy ID"]}
-          if (!start_date.nil?)
+
+          start_date = start_only.find {|c| c["Project"] == project["ID"]}
+           if (start_date.nil?)
+            start_date = completed.find {|c| c["Project"] == project["ID"]}
+          end
+
+          start_date = start_date.nil? ? nil : DateTime.strptime(start_date["Actualstartdate"],"%m/%d/%Y")
+
+          completed_date = completed.find {|c| c["Project"] == project["ID"]}
+          completed_date = completed_date.nil? ? nil : DateTime.strptime(completed_date["Actualcompletiondate"],"%m/%d/%Y")
+
+         if (!start_date.nil?)
                   puts "Working with: #{project["ID"]}"
 
-                  project["plannedStartDate"] = start_date["jira"]
-                  project["actualStartDate"] = start_date["jira"]
+                  project["plannedStartDate"] = start_date
+                  project["actualStartDate"] = start_date
 
                   project.delete("DE:Salesforce ID")
                   project.delete("DE:Project Type")
                   project.delete("DE:Legacy ID")
                   project.delete("DE:Legacy")
                   attask.project.update(project)
-                  puts "The project #{project["ID"]} has been updated (Start Date) #{start_date["jira"]}"
-            if (!completition_date.nil? and project["status"] == "CPL" )
+                  puts "The project #{project["ID"]} has been updated (Start Date) #{start_date}"
+            if (!completed_date.nil?)
 
                       project["status"] = "CUR"
                       attask.project.update(project)
@@ -1095,10 +1128,10 @@ command :update_planed_date do |c|
                       task["projectID"] = project["ID"]
                       task["name"] = "Completition of Legacy project - Jira"
                       task["description"] = "Added to edit completition date in attask"
-                      task["actualStartDate"] = start_date["jira"]
-                      task["actualCompletionDate"] = completition_date["jira"]
+                      task["actualStartDate"] = start_date
+                      task["actualCompletionDate"] = completed_date
                       task["status"] = "CPL"
-                      puts "The project completition date is #{completition_date["jira"]}"
+                      puts "The project completition date is #{completed_date}"
 
                       attask.task.add(task)
 
@@ -1108,75 +1141,8 @@ command :update_planed_date do |c|
                       puts "The project set to Completed #{project["ID"]}"
 
             end
-          else
-            puts "Jo projectID #{project["ID"]} nema v souboru"
           end
         end
-
-
-
-
-
-
-      #if (!sf_element.nil? && !sf_element.empty?)
-      #
-      #    if (sf_element[:Services_Kick_Off_Date__c] != nil) or (sf_element[:Services_Completion_Date__c] != nil) then
-      #      project["plannedStartDate"] = sf_element[:Services_Kick_Off_Date__c]
-      #      project["actualStartDate"] = sf_element[:Services_Kick_Off_Date__c]
-      #
-      #      project.delete("DE:Salesforce ID")
-      #      project.delete("DE:Project Type")
-      #      project.delete("DE:Legacy ID")
-      #      project.delete("DE:Legacy")
-      #      attask.project.update(project)
-      #      puts "The project #{sf_element[:Id].first} has been updated (Start Date) #{sf_element[:Services_Kick_Off_Date__c]}"
-      #
-      #    else
-      #      puts "The project #{sf_element[:Id].first} has not Services_Kick_Off_Date__c in SF"
-      #    end
-      #
-      #    if (project.status == "CPL") then
-      #      if (sf_element[:Services_Completion_Date__c] != nil) then
-      #
-      #        project["status"] = "CUR"
-      #        attask.project.update(project)
-      #
-      #        puts "The project set to Current #{project["ID"]}"
-      #
-      #        task = Attask::Task.new()
-      #        #task["categoryID"]= "5167fbd8000b3cd1c2d8f2e670c29f4a"
-      #        #task["groupID"] = "511df3ee000a3646cf87f7f192fde769"
-      #        task["projectID"] = project["ID"]
-      #        task["name"] = "Completition of Legacy project"
-      #        task["description"] = "Added to edit completition date in attask"
-      #        #task["plannedStartDate"] = sf_element[:Services_Completion_Date__c]
-      #        #task["plannedCompletionDate"] = sf_element[:Services_Completion_Date__c]
-      #        task["actualStartDate"] = sf_element[:Services_Kick_Off_Date__c]
-      #        task["actualCompletionDate"] = sf_element[:Services_Completion_Date__c]
-      #        task["status"] = "CPL"
-      #        puts "The project completition date is #{sf_element[:Services_Completion_Date__c]}"
-      #
-      #        attask.task.add(task)
-      #
-      #        project["status"] = "CPL"
-      #        attask.project.update(project)
-      #
-      #        puts "The project set to Completed #{project["ID"]}"
-      #
-      #        #puts "The project #{sf_element[:Id].first} has been updated (Completion date) #{sf_element[:Services_Completion_Date__c]}"
-      #        #project["projectedCompletionDate"] = sf_element[:Services_Completion_Date__c]
-      #        #project["actualCompletionDate"] = sf_element[:Services_Completion_Date__c]
-      #        #puts "The project #{sf_element[:Id].first} has been updated (Completion date) #{sf_element[:Services_Completion_Date__c]}"
-      #        #attask.project.update(project)
-      #      else
-      #        puts "The project #{sf_element[:Id].first} has not Services_Completion_Date__c in SF"
-      #      end
-      #    end
-      #
-      #
-      #
-      #
-      #end
     end
 
   end
