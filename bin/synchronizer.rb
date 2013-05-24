@@ -119,68 +119,50 @@ command :update do |c|
         "Contractor" => "50f02f810002afbea77b8672f462c330"
     }
 
-    attask = Attask.client("gooddata",at_username,at_password)
+    #attask = Attask.client("gooddata",at_username,at_password)
+    attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
-    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Practice Group,DE:Services Type,DE:Service Type Subcategory,DE:Salesforce Name"})
-
-    puts "Attask loaded"
-
+    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Practice Group,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours"})
 
     salesforce = Synchronizer::SalesForce.new( sf_username,sf_password)
-
     salesforce.query("SELECT Amount, Id, Name, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c FROM Opportunity",{:values => [:Id,:Amount,:Name,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type],:as_hash => true})
-
-
-    puts "SF loaded"
 
     count = 0
 
-    projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil}
+    projects = projects.find_all{|p| (p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil) and (p["DE:Product ID"] == nil or p["DE:Product ID"] == p["DE:Salesforce ID"]) }
 
     projects.each do |project|
 
     helper = Synchronizer::Helper.new(project["ID"],project["name"],"project")
+
     sfdc_object = salesforce.getValueByField(:Id,project["DE:Salesforce ID"])
 
       if sfdc_object.first != nil then
 
         sfdc_object  = sfdc_object.first
 
-        if (project["DE:Salesforce ID"].casecmp("0068000000gubcKAAQ") == 0) then
-          if (project["DE:Project Type"] != "Maintenance" and project["DE:Project Type"] != "Migration" and project["DE:Project Type"] != "Customer Success" ) then
-            project[CGI.escape("DE:Project Type")] = "Internal" unless helper.comparerString(project["DE:Project Type"],"Internal","Project Type")
-            project[CGI.escape("DE:Practice Group")] = "Europe" unless helper.comparerString(project["DE:Practice Group"],"Europe","Practice Group")
-          end
+        # UPDATE CONDITIONS -> Every time
+        project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Type],"Salesforce Type")
+        project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Name],"Salesforce Name")
 
-          project["companyID"] =  "50e6fa86001bd48395eb3772aaafe2c9" unless helper.comparerString(project["companyID"],"50e6fa86001bd48395eb3772aaafe2c9","companyID")
-          #project["groupID"] = "50f731ae002a695ba0f5eb3fe47f34ff" unless helper.comparerString(project["groupID"],"50f731ae002a695ba0f5eb3fe47f34ff","groupID")
-
-        else
-          # UPDATE CONDITIONS -> Every time
-
-          project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Type],"Salesforce Type")
-          project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Name],"Salesforce Name")
-
-
-          #project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Name],"Salesforce Name") unless sfdc_object[:Name].include? "Redfin"
-
-          if (project["DE:Project Type"] != "Maintenance" and project["DE:Project Type"] != "Migration" and project["DE:Project Type"] != "Customer Success" ) then
-            project[CGI.escape("DE:Practice Group")] = sfdc_object[:Practice_Group__c] unless helper.comparerString(project["DE:Practice Group"],sfdc_object[:Practice_Group__c],"Practice Group")
-          end
-
-          if (project["categoryID"] == "50f5a7ee000d0278de51cc3a4d803e62") then
-            project[CGI.escape("DE:Services Type")] = sfdc_object[:Services_Type__c] unless helper.comparerString(project["DE:Services Type"],sfdc_object[:Services_Type__c],"Services Type")
-            project[CGI.escape("DE:Service Type Subcategory")] = sfdc_object[:Services_Type_Subcategory__c] unless helper.comparerString(project["DE:Service Type Subcategory"],sfdc_object[:Services_Type_Subcategory__c],"Service Type Subcategory")
-          end
-
-          # STATUS == Awaiting Sign-off then Condition Type = Manual and Status = On Target
-          if (project["status"] == "ASO") then
-            project["condition"] = "ON" unless helper.comparerString(project["condition"],"ON","condition") # On-Target
-            project["conditionType"] = "MN" unless helper.comparerString(project["conditionType"],"MN","conditionType") # Manual
-          end
+        # Additional Project Information - Type of Custome Fields
+        if (project["categoryID"] == "50f5a7ee000d0278de51cc3a4d803e62") then
+          project[CGI.escape("DE:Billing Type")] = sfdc_object[:Services_Type__c] unless helper.comparerString(project["DE:Billing Type"],sfdc_object[:Services_Type__c],"Billing Type")
+          project[CGI.escape("DE:Service Type")] = sfdc_object[:Services_Type_Subcategory__c] unless helper.comparerString(project["DE:Service Type"],sfdc_object[:Services_Type_Subcategory__c],"Service Type")
+          project[CGI.escape("DE:Product ID")] = sfdc_object[:Id].first unless helper.comparerString(project["DE:Product ID"],sfdc_object[:Id].first,"Product ID")
         end
 
+        if (project["DE:Project Type"] == "Implementation")
+          project[CGI.escape("DE:Total Service Hours")] = sfdc_object[:PS_Hours__c] unless helper.comparerString(project["DE:Total Service Hours"],sfdc_object[:PS_Hours__c],"Total Service Hours")
+        end
+
+
+        # STATUS == Awaiting Sign-off then Condition Type = Manual and Status = On Target
+        if (project["status"] == "ASO") then
+          project["condition"] = "ON" unless helper.comparerString(project["condition"],"ON","condition") # On-Target
+          project["conditionType"] = "MN" unless helper.comparerString(project["conditionType"],"MN","conditionType") # Manual
+        end
 
         # Update budget if there is only one project with specific SFDC_ID
         duplicated_sfdc = projects.find_all{|p| p["DE:Salesforce ID"] != nil and project["DE:Salesforce ID"] != nil and project["DE:Project Type"] != "Maintenance" and p["DE:Salesforce ID"].casecmp(project["DE:Salesforce ID"]) == 0 ? true : false}
@@ -197,10 +179,11 @@ command :update do |c|
         project.delete("DE:Project Type")
         project.delete("DE:Salesforce Type")
         project.delete("DE:Salesforce Name")
-        project.delete("DE:Services Type")
+        project.delete("DE:Service Type")
         project.delete("DE:Practice Group")
-        project.delete("DE:Service Type Subcategory")
-
+        project.delete("DE:Billing Type")
+        project.delete("DE:Product ID")
+        project.delete("DE:Total Service Hours")
 
         attask.project.update(project) if helper.changed
         helper.printLog(@log) if helper.changed
@@ -252,6 +235,203 @@ command :update do |c|
       end
     end
  end
+
+
+
+desc 'SFDC -> Attask Update'
+command :update_product do |c|
+#  c.desc 'Execute only for one entity.'
+#  c.default_value false
+#  c.flag [:o, :only]
+
+  c.desc 'Username to SF account'
+  c.flag [:sf_username]
+
+  c.desc 'Password + token to SF account'
+  c.flag [:sf_password]
+
+  c.desc 'Username to Attask'
+  c.flag [:at_username]
+
+  c.desc 'Password to Attask'
+  c.flag [:at_password]
+
+
+  c.action do |global_options,options,args|
+
+    sf_username = options[:sf_username]
+    sf_password = options[:sf_password]
+    at_username = options[:at_username]
+    at_password = options[:at_password]
+
+
+    @mapping = {
+        "Intern" => "50f73f80002b9038434b0b21c00abb01",
+        "Solution Architect" => "50eaa2290009eeba6d208a473efbb83d",
+        "Practice Manager" => "50eaa298000a530cb7ba2ce1bf82bab1",
+        "Consultant" => "50ad5628000469c57167f54cb5289999",
+        "Architect" => "50eaa26e0009eed64d1aa82aa78b82ac",
+        "Director" => "50eaa2380009eec4c88cd0b565099749",
+        "SE Team Lead" => "50eaa20c0009ee98166e57ccc6c187b5",
+        "Solution Engineer" => "50eaa1f60009ee8d8f23380a8a050c9b",
+        "Contractor" => "50f02f810002afbea77b8672f462c330"
+    }
+
+    attask = Attask.client("gooddata",at_username,at_password)
+    #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
+
+    #users = attask.user.search({:fields => "ID,name",:customFields => ""})
+    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours"})
+
+    salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
+    salesforce.query("SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId],:as_hash => true})
+
+    account = Synchronizer::SalesForce.new(sf_username,sf_password)
+    account.query("SELECT Id, Name FROM Account",{:values => [:Id,:Name],:as_hash => true})
+
+    pricebookentry = Synchronizer::SalesForce.new(sf_username,sf_password)
+    pricebookentry.query("SELECT Id, Product2Id FROM PricebookEntry",{:values => [:Id,:Product2Id],:as_hash => true})
+    pricebookentry = pricebookentry.output
+
+    products = Synchronizer::SalesForce.new(sf_username,sf_password)
+    products.query("SELECT Id,Name FROM Product2",{:values => [:Id,:Name],:as_hash => true})
+    products = products.output
+
+    opportunityLineItem = Synchronizer::SalesForce.new(sf_username,sf_password)
+    opportunityLineItem.query("SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId,Service_Type__c,Services_Billing_Type__c FROM OpportunityLineItem",{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId,:Service_Type__c,:Services_Billing_Type__c],:as_hash => true})
+    opportunityLineItem_data = opportunityLineItem.output
+
+
+    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0 }
+    salesforce.filter("6 - CLOSED WON")
+    salesforce_data = salesforce.output
+
+
+
+    opportunityLineItem_data.each do |li|
+      s = salesforce_data.find{|s| s[:Id].first == li[:OpportunityId]}
+      li[:Opportunity] = s
+      pe = pricebookentry.find do |e|
+        e[:Id].first == li[:PricebookEntryId]
+      end
+      product = products.find do |p|
+        p[:Id].first == pe[:Product2Id]
+      end
+      li[:Product] = product
+    end
+
+    count = 0
+
+    projects = projects.find_all{|p| (p["DE:Product ID"] != nil and p["DE:Product ID"] != p["DE:Salesforce ID"]) }
+
+    projects.each do |project|
+
+      helper = Synchronizer::Helper.new(project["ID"],project["name"],"project")
+
+      sfdc_object = opportunityLineItem_data.find {|li| li[:Id].first == project["DE:Product ID"]}
+
+
+      if (!sfdc_object.nil?)
+
+        project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Opportunity][:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Opportunity][:Type],"Salesforce Type")
+        project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Opportunity][:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Opportunity][:Name],"Salesforce Name")
+
+        # Additional Project Information - Type of Custome Fields
+        if (project["categoryID"] == "50f5a7ee000d0278de51cc3a4d803e62") then
+
+          project.name =  (sfdc_object[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + sfdc_object[:Product][:Name]) unless helper.comparerString(project["name"],(sfdc_object[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + sfdc_object[:Product][:Name]),"name")
+          project[CGI.escape("DE:Service Type")] = sfdc_object[:Service_Type__c] unless helper.comparerString(project["DE:Service Type"],sfdc_object[:Service_Type__c],"Service Type")
+          project[CGI.escape("DE:Billing Type")] = sfdc_object[:Services_Billing_Type__c] unless helper.comparerString(project["DE:Billing Type"],sfdc_object[:Services_Billing_Type__c],"Billing Type")
+          project[CGI.escape("DE:Hours per Period")] = sfdc_object[:Service_Hours_per_Period__c] unless helper.comparerString(project["DE:Service Type"],sfdc_object[:Service_Hours_per_Period__c],"Hours per Period")
+          project[CGI.escape("DE:Number of Periods")] = sfdc_object[:Number_of_Periods__c] unless helper.comparerString(project["DE:Number of Periods"],sfdc_object[:Number_of_Periods__c],"Number of Periods")
+          project[CGI.escape("DE:Expiration Period")] = sfdc_object[:Expiration_Period__c] unless helper.comparerString(project["DE:Expiration Period"],sfdc_object[:Expiration_Period__c],"Expiration Period")
+          project.budget =  sfdc_object[:TotalPrice] unless helper.comparerString(project["budget"],sfdc_object[:TotalPrice],"budget")
+        end
+
+        if (project["DE:Project Type"] == "Implementation")
+          project[CGI.escape("DE:Total Service Hours")] = sfdc_object[:Total_Service_Hours__c] unless helper.comparerString(project["DE:Total Service Hours"],sfdc_object[:Total_Service_Hours__c],"Total Service Hours")
+        end
+
+        # STATUS == Awaiting Sign-off then Condition Type = Manual and Status = On Target
+        if (project["status"] == "ASO") then
+          project["condition"] = "ON" unless helper.comparerString(project["condition"],"ON","condition") # On-Target
+          project["conditionType"] = "MN" unless helper.comparerString(project["conditionType"],"MN","conditionType") # Manual
+        end
+
+        # Update budget if there is only one project with specific SFDC_ID
+        duplicated_sfdc = projects.find_all{|p| p["DE:Product ID"] != nil and project["DE:Product ID"] != nil and project["DE:Project Type"] == "Implementation" and p["DE:Product ID"].casecmp(project["DE:Product ID"]) == 0 ? true : false}
+
+        if (duplicated_sfdc.count == 1 and sfdc_object[:Total_Service_Hours__c] != nil and project["DE:Project Type"] != "Maintenance") then
+          project[CGI.escape("DE:Budget Hours")] =  sfdc_object[:Total_Service_Hours__c] unless helper.comparerString(project["DE:Budget Hours"],sfdc_object[:Total_Service_Hours__c],"Budget Hours")
+        end
+
+        project.delete("DE:Salesforce ID")
+        project.delete("DE:Project Type")
+        project.delete("DE:Salesforce Type")
+        project.delete("DE:Salesforce Name")
+        project.delete("DE:Service Type")
+        project.delete("DE:Budget Hours")
+        project.delete("DE:Service Type")
+        project.delete("DE:Billing Type")
+        project.delete("DE:Total Service Hours")
+        project.delete("DE:Product ID")
+        project.delete("DE:Hours per Period")
+        project.delete("DE:Number of Periods")
+        project.delete("DE:Expiration Period")
+        project.delete("DE:Total Service Hours")
+
+        attask.project.update(project) if helper.changed
+        helper.printLog(@log) if helper.changed
+        @work_done = true if helper.changed
+
+        if (sfdc_object[:TotalPrice] != nil and Float(sfdc_object[:TotalPrice]) != 0 and sfdc_object[:Total_Service_Hours__c] != nil and  Float(sfdc_object[:Total_Service_Hours__c]) != 0 and project["DE:Project Type"] != "Maintenance") then
+          budget = Float(sfdc_object[:TotalPrice])
+          hours = Float(sfdc_object[:Total_Service_Hours__c])
+          rateValue = budget / hours if hours > 0
+
+          rates = attask.rate.search({},{:projectID => project.ID})
+          recalculate = false
+
+          @mapping.each_pair do |k,v|
+            #Check if rate is in system
+            rate = rates.find{|r| r.roleID == v}
+            if (rate != nil)
+              oldValue = Float(rate.rateValue)
+              oldValue = oldValue.round(2)
+              newValue =   Float(rateValue)
+              newValue = newValue.round(2)
+              if oldValue !=  newValue
+                rate.rateValue = newValue
+                attask.rate.update(rate)
+                helper.getProjectInfo(@log) if recalculate == false
+                @log.info "We are updating rate from #{oldValue} to #{newValue} (#{rate.roleID}) for project #{project["ID"]}"
+                recalculate = true
+              end
+            else
+              rate = Attask::Rate.new()
+              rate["projectID"] = project.ID
+              rate["roleID"] = v
+              rate["rateValue"] = rateValue.round(2)
+              helper.getProjectInfo(@log) if recalculate == false
+              @log.info "We are adding rate #{rateValue.round(2)} (#{v}) for project #{project["ID"]}"
+              attask.rate.add(rate)
+              recalculate = true
+            end
+            attask.project.exec_function(project,"calculateFinance") if recalculate == true
+            if recalculate == true then
+              @work_done = true
+              @log.info "------------------------------------------"
+            end
+
+          end
+        end
+      end
+
+    end
+  end
+end
+
+
 
 desc 'Generate metadata'
 command :generate_metadata do |c|
@@ -1153,8 +1333,8 @@ end
 
 pre do |global,command,options,args|
   next true if command.nil?
-  #@log = Logger.new("log/migration_#{command.name}.log",'daily')
-  @log = Logger.new(STDOUT,'daily')
+  @log = Logger.new("log/migration_#{command.name}.log",'daily')
+  #@log = Logger.new(STDOUT,'daily')
   @work_done = false
 
 
