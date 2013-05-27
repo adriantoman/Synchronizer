@@ -119,8 +119,8 @@ command :update do |c|
         "Contractor" => "50f02f810002afbea77b8672f462c330"
     }
 
-    #attask = Attask.client("gooddata",at_username,at_password)
-    attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
+    attask = Attask.client("gooddata",at_username,at_password)
+    #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
     projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Practice Group,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours"})
@@ -342,7 +342,7 @@ command :update_product do |c|
           project.name =  (sfdc_object[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + sfdc_object[:Product][:Name]) unless helper.comparerString(project["name"],(sfdc_object[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + sfdc_object[:Product][:Name]),"name")
           project[CGI.escape("DE:Service Type")] = sfdc_object[:Service_Type__c] unless helper.comparerString(project["DE:Service Type"],sfdc_object[:Service_Type__c],"Service Type")
           project[CGI.escape("DE:Billing Type")] = sfdc_object[:Services_Billing_Type__c] unless helper.comparerString(project["DE:Billing Type"],sfdc_object[:Services_Billing_Type__c],"Billing Type")
-          project[CGI.escape("DE:Hours per Period")] = sfdc_object[:Service_Hours_per_Period__c] unless helper.comparerString(project["DE:Service Type"],sfdc_object[:Service_Hours_per_Period__c],"Hours per Period")
+          project[CGI.escape("DE:Hours per Period")] = sfdc_object[:Service_Hours_per_Period__c] unless helper.comparerString(project["DE:Hours per Period"],sfdc_object[:Service_Hours_per_Period__c],"Hours per Period")
           project[CGI.escape("DE:Number of Periods")] = sfdc_object[:Number_of_Periods__c] unless helper.comparerString(project["DE:Number of Periods"],sfdc_object[:Number_of_Periods__c],"Number of Periods")
           project[CGI.escape("DE:Expiration Period")] = sfdc_object[:Expiration_Period__c] unless helper.comparerString(project["DE:Expiration Period"],sfdc_object[:Expiration_Period__c],"Expiration Period")
           project.budget =  sfdc_object[:TotalPrice] unless helper.comparerString(project["budget"],sfdc_object[:TotalPrice],"budget")
