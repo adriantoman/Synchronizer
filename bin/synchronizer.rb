@@ -130,7 +130,7 @@ command :update do |c|
 
     count = 0
 
-    projects = projects.find_all{|p| (p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil) and (p["DE:Product ID"] == nil or p["DE:Product ID"] == p["DE:Salesforce ID"]) }
+    projects = projects.find_all{|p| (p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil) and (p["DE:Product ID"] == nil or p["DE:Product ID"] == "" or p["DE:Product ID"] == p["DE:Salesforce ID"]) }
 
     projects.each do |project|
 
@@ -322,7 +322,7 @@ command :update_product do |c|
 
     count = 0
 
-    projects = projects.find_all{|p| (p["DE:Product ID"] != nil and p["DE:Product ID"] != p["DE:Salesforce ID"]) }
+    projects = projects.find_all{|p| (p["DE:Product ID"] != nil and p["DE:Product ID"] != "" and p["DE:Product ID"] != p["DE:Salesforce ID"]) }
 
     projects.each do |project|
 
@@ -345,7 +345,7 @@ command :update_product do |c|
           project[CGI.escape("DE:Hours per Period")] = sfdc_object[:Service_Hours_per_Period__c] unless helper.comparerString(project["DE:Hours per Period"],sfdc_object[:Service_Hours_per_Period__c],"Hours per Period")
           project[CGI.escape("DE:Number of Periods")] = sfdc_object[:Number_of_Periods__c] unless helper.comparerString(project["DE:Number of Periods"],sfdc_object[:Number_of_Periods__c],"Number of Periods")
           project[CGI.escape("DE:Expiration Period")] = sfdc_object[:Expiration_Period__c] unless helper.comparerString(project["DE:Expiration Period"],sfdc_object[:Expiration_Period__c],"Expiration Period")
-          project.budget =  sfdc_object[:TotalPrice] unless helper.comparerString(project["budget"],sfdc_object[:TotalPrice],"budget")
+
         end
 
         if (project["DE:Project Type"] == "Implementation")
@@ -363,6 +363,7 @@ command :update_product do |c|
 
         if (duplicated_sfdc.count == 1 and sfdc_object[:Total_Service_Hours__c] != nil and project["DE:Project Type"] != "Maintenance") then
           project[CGI.escape("DE:Budget Hours")] =  sfdc_object[:Total_Service_Hours__c] unless helper.comparerString(project["DE:Budget Hours"],sfdc_object[:Total_Service_Hours__c],"Budget Hours")
+          project.budget =  sfdc_object[:TotalPrice] unless helper.comparerString(project["budget"],sfdc_object[:TotalPrice],"budget")
         end
 
         project.delete("DE:Salesforce ID")
@@ -1045,20 +1046,12 @@ command :update_ps_hours do |c|
     at_password = options[:at_password]
 
     attask = Attask.client("gooddata",at_username,at_password)
+    #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
 
-    projects = attask.project.search({:fields => "ID,name,DE:Salesforce ID,DE:Project Type",:customFields => ""})
-    users = attask.user.search()
-    companies = attask.company.search(({:fields => "ID,name"}))
+    projects = attask.project.search({:fields => "ID,name",:customFields => "DE:Total Service Hours"})
 
-    salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
-    salesforce.query("SELECT Id,ps_hours__c FROM Opportunity",{:values => [:Id,:ps_hours__c],:as_hash => true})
-
-    projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil }
-    projects = projects.find_all{|p|  p["DE:Project Type"] == "Implementation" }
 
     hours = []
-
-
     csv = CSV.open("/home/adrian.toman/import/hours.csv",'r', :headers => true)
 
     csv.each do |row|
@@ -1075,21 +1068,23 @@ command :update_ps_hours do |c|
     projects.each do |project|
       element = hours.find{|value| value[0] == project["ID"]}
 
-
-      sf_element = salesforce.output.find{|s| s[:Id].first == project["DE:Salesforce ID"]}
-      if (!sf_element.nil? && !sf_element.empty?)
+      if (!element.nil?)
 
          if element != nil
             value_hours = Float(element[2])
          else
             value_hours = 0
          end
-         value_ps_hours = Float(sf_element[:PS_Hours__c])
 
-         project[CGI.escape("DE:Budget Hours")] =  value_ps_hours - value_hours
-         project.delete("DE:Salesforce ID")
-         project.delete("DE:Project Type")
-         puts "I have found hours: #{value_hours} and in SFDC (#{sf_element[:Id].first}) is #{value_ps_hours} and I am setting #{value_ps_hours - value_hours}"
+         if (!project["DE:Total Service Hours"].nil?)
+            budget_hours = Float(project["DE:Total Service Hours"])
+         else
+           budget_hours = 0
+         end
+
+         project[CGI.escape("DE:Legacy Budget Hours")] =  budget_hours - value_hours
+         project.delete("DE:Total Service Hours")
+         puts "Project ID - #{project.ID} I have found hours and I am setting #{budget_hours - value_hours}"
          attask.project.update(project)
       end
     end
@@ -1259,11 +1254,11 @@ command :update_planed_date do |c|
     at_username = options[:at_username]
     at_password = options[:at_password]
 
-    attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
-    #attask = Attask.client("gooddata",at_username,at_password)
+    #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
+    attask = Attask.client("gooddata",at_username,at_password)
 
     projects = attask.project.search({:fields => "ID,name,DE:Project Type,DE:Legacy ID,DE:Legacy,status",:customFields => ""})
-    tasks = attask.task.search({:fields => "ID,name,projectID"})
+    tasks = attask.task.search({:fields => "ID,name,projectID",:customFields => ""})
 
     start_only = FasterCSV.read("/home/adrian.toman/import/ActualStartDate_only.csv",{:headers=>true})
     completed = FasterCSV.read("/home/adrian.toman/import/Completed_Project_ ActualStartDate_CompletionDate.csv",{:headers=>true})
@@ -1273,56 +1268,114 @@ command :update_planed_date do |c|
     projects.each do |project|
          task = tasks.find {|t| t["projectID"] == project["ID"] and (t["name"] == "Completition of Legacy project" or t["name"] == "Completition of Legacy project - Jira") }
 
-        if (task.nil?)
-
-          start_date = start_only.find {|c| c["Project"] == project["ID"]}
-           if (start_date.nil?)
-            start_date = completed.find {|c| c["Project"] == project["ID"]}
-          end
-
-          start_date = start_date.nil? ? nil : DateTime.strptime(start_date["Actualstartdate"],"%m/%d/%Y")
-
-          completed_date = completed.find {|c| c["Project"] == project["ID"]}
-          completed_date = completed_date.nil? ? nil : DateTime.strptime(completed_date["Actualcompletiondate"],"%m/%d/%Y")
-
-         if (!start_date.nil?)
-                  puts "Working with: #{project["ID"]}"
-
-                  project["plannedStartDate"] = start_date
-                  project["actualStartDate"] = start_date
-
-                  project.delete("DE:Salesforce ID")
-                  project.delete("DE:Project Type")
-                  project.delete("DE:Legacy ID")
-                  project.delete("DE:Legacy")
-                  attask.project.update(project)
-                  puts "The project #{project["ID"]} has been updated (Start Date) #{start_date}"
-            if (!completed_date.nil?)
-
-                      project["status"] = "CUR"
-                      attask.project.update(project)
-
-                      puts "The project set to Current #{project["ID"]}"
-
-                      task = Attask::Task.new()
-                      task["projectID"] = project["ID"]
-                      task["name"] = "Completition of Legacy project - Jira"
-                      task["description"] = "Added to edit completition date in attask"
-                      task["actualStartDate"] = start_date
-                      task["actualCompletionDate"] = completed_date
-                      task["status"] = "CPL"
-                      puts "The project completition date is #{completed_date}"
-
-                      attask.task.add(task)
-
-                      project["status"] = "CPL"
-                      attask.project.update(project)
-
-                      puts "The project set to Completed #{project["ID"]}"
-
-            end
-          end
+        start_date = start_only.find {|c| c["Project"] == project["ID"]}
+         if (start_date.nil?)
+          start_date = completed.find {|c| c["Project"] == project["ID"]}
         end
+
+        start_date = start_date.nil? ? nil : DateTime.strptime(start_date["Actualstartdate"],"%m/%d/%Y")
+
+        completed_date = completed.find {|c| c["Project"] == project["ID"]}
+        completed_date = completed_date.nil? ? nil : DateTime.strptime(completed_date["Actualcompletiondate"],"%m/%d/%Y")
+
+       if (!start_date.nil?)
+
+          puts "Working with: #{project["ID"]}"
+
+          #project["plannedStartDate"] = start_date
+          #project["actualStartDate"] = start_date
+          project.delete("DE:Salesforce ID")
+          project.delete("DE:Project Type")
+          project.delete("DE:Legacy ID")
+          project.delete("DE:Legacy")
+          #attask.project.update(project)
+          #puts "The project #{project["ID"]} has been updated (Start Date) #{start_date}"
+
+          completed_test = project["status"] == "CPL"
+
+          project["status"] = "CUR" if completed_test
+          attask.project.update(project) if completed_test
+
+          if (task.nil?)
+            task = Attask::Task.new()
+            task["projectID"] = project["ID"]
+            task["name"] = "Completition of Legacy project - Jira"
+            task["description"] = "Added to edit completition date in attask"
+            task["actualStartDate"] = start_date
+            task["actualCompletionDate"] = completed_date || start_date
+            task["status"] = "CPL"
+            puts "The project start date is #{completed_date || start_date}"
+            puts "The project completition date is #{completed_date || start_date}"
+            puts "The project set to Current #{project["ID"]}"
+
+            attask.task.add(task)
+          else
+
+            task["actualStartDate"] = start_date
+            task["actualCompletionDate"] = completed_date || start_date
+            task["status"] = "CPL"
+            attask.task.update(task)
+            puts "The task start date was changed to #{start_date}"
+            puts "The task completition date was changed to #{completed_date || start_date}"
+            puts "The project set to Current #{project["ID"]}"
+
+          end
+
+          project["status"] = "CPL" if completed_test
+          attask.project.update(project) if completed_test
+
+        end
+    end
+
+  end
+end
+
+
+desc 'Add new projects to SF'
+command :update_old_projects do |c|
+
+  c.desc 'Username to SF account'
+  c.flag [:sf_username]
+
+  c.desc 'Password + token to SF account'
+  c.flag [:sf_password]
+
+  c.desc 'Username to Attask'
+
+  c.flag [:at_username]
+
+  c.desc 'Password to Attask'
+  c.flag [:at_password]
+
+
+  c.action do |global_options,options,args|
+
+
+    sf_username = options[:sf_username]
+    sf_password = options[:sf_password]
+    at_username = options[:at_username]
+    at_password = options[:at_password]
+
+    attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
+    #attask = Attask.client("gooddata",at_username,at_password)
+
+    projects = attask.project.search({:fields => "ID,name",:customFields => "DE:Total Service Hours"})
+
+    hours = FasterCSV.read("/home/adrian.toman/import/hours.csv",{:headers=>true})
+
+    projects.each do |project|
+      hour = hours.find {|h| h["projectid"] == project.ID}
+
+      if (!hour.nil?)
+        project["DE:Legacy Budget Hours"]
+
+
+
+
+      end
+
+
+
     end
 
   end
@@ -1331,10 +1384,18 @@ end
 
 
 
+
+
+
+
+
+
+
+
 pre do |global,command,options,args|
   next true if command.nil?
-  @log = Logger.new("log/migration_#{command.name}.log",'daily')
-  #@log = Logger.new(STDOUT,'daily')
+  @log = Logger.new("log/migration_#{command.name}.log",'daily') if ENV["USERNAME"] != "adrian.toman"
+  @log = Logger.new(STDOUT,'daily') if ENV["USERNAME"] == "adrian.toman"
   @work_done = false
 
 
