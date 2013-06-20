@@ -640,7 +640,6 @@ command :add do |c|
     opportunityLineItem.query("SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId FROM OpportunityLineItem",{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId],:as_hash => true})
     opportunityLineItem_data = opportunityLineItem.output
 
-    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0 }
     salesforce.filter("6 - CLOSED WON")
     salesforce_data = salesforce.output
 
@@ -658,6 +657,10 @@ command :add do |c|
       li[:Product] = product
     end
 
+
+    #and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) == 0
+
+    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (!li[:Product].nil? and li[:Product][:Name] == 'PS-INVESTMENT' and Float(li[:Total_Service_Hours__c]) > 0)}
     opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Opportunity] != nil}
 
     # Find all product which were not created already
@@ -669,7 +672,6 @@ command :add do |c|
         false
       end
     end
-
 
     count = 0
 
@@ -705,7 +707,12 @@ command :add do |c|
 
       project["URL"] = "https://na6.salesforce.com/#{li[:Id].first}" if li[:Id].first != nil
       project[CGI.escape("DE:Salesforce ID")] = li[:Opportunity][:Id].first
-      project[CGI.escape("DE:Project Type")] = "Implementation"
+
+      if (li[:Product][:Name] == 'PS-INVESTMENT')
+        project[CGI.escape("DE:Project Type")] = "Investment"
+      else
+        project[CGI.escape("DE:Project Type")] = "Implementation"
+      end
 
       project[CGI.escape("DE:Hours per Period")] = li[:Service_Hours_per_Period__c]
       project[CGI.escape("DE:Number of Periods")] = li[:Number_of_Periods__c]
@@ -1048,16 +1055,16 @@ command :update_ps_hours do |c|
     attask = Attask.client("gooddata",at_username,at_password)
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
 
-    projects = attask.project.search({:fields => "ID,name",:customFields => "DE:Total Service Hours"})
+    projects = attask.project.search({:fields => "ID,name,categoryID",:customFields => "DE:Total Service Hours,DE:Budget Hours"})
 
 
-    hours = []
-    csv = CSV.open("/home/adrian.toman/import/hours.csv",'r', :headers => true)
+    #hours = []
+    #csv = CSV.open("/home/adrian.toman/import/hours.csv",'r', :headers => true)
 
-    csv.each do |row|
-      temp = [row[0].split(",")[0],row[0].split(",")[1],row[0].split(",")[2]]
-      hours << temp
-    end
+    #csv.each do |row|
+    #  temp = [row[0].split(",")[0],row[0].split(",")[1],row[0].split(",")[2]]
+    #  hours << temp
+    #end
 
     #FasterCSV.foreach("/home/adrian.toman/import/hours2.csv", :quote_char => '"',:col_sep =>',', :headers => true) do |row|
     #  pp row
@@ -1066,27 +1073,26 @@ command :update_ps_hours do |c|
     #end
 
     projects.each do |project|
-      element = hours.find{|value| value[0] == project["ID"]}
-
-      if (!element.nil?)
-
-         if element != nil
-            value_hours = Float(element[2])
+      if (project["categoryID"] == "50f5a7ee000d0278de51cc3a4d803e62") then
+         if project["DE:Budget Hours"] != nil
+            value_hours = Float(project["DE:Budget Hours"])
          else
             value_hours = 0
          end
 
          if (!project["DE:Total Service Hours"].nil?)
-            budget_hours = Float(project["DE:Total Service Hours"])
+           budget_hours = Float(project["DE:Total Service Hours"])
          else
            budget_hours = 0
          end
 
          project[CGI.escape("DE:Legacy Budget Hours")] =  budget_hours - value_hours
          project.delete("DE:Total Service Hours")
+         project.delete("DE:Budget Hours")
          puts "Project ID - #{project.ID} I have found hours and I am setting #{budget_hours - value_hours}"
          attask.project.update(project)
       end
+
     end
 
   end
