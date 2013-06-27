@@ -302,7 +302,7 @@ command :update_product do |c|
     opportunityLineItem_data = opportunityLineItem.output
 
 
-    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0 }
+    #opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0 }
     salesforce.filter("6 - CLOSED WON")
     salesforce_data = salesforce.output
 
