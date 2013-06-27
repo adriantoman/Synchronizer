@@ -660,7 +660,7 @@ command :add do |c|
 
     #and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) == 0
 
-    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (!li[:Product].nil? and li[:Product][:Name] == 'PS-INVESTMENT' and Float(li[:Total_Service_Hours__c]) > 0)}
+    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (!li[:Product].nil? and (li[:Product][:Name] == 'PS-INVESTMENT' or li[:Product][:Name] == 'GD-ENT-EOR') and Float(li[:Total_Service_Hours__c]) > 0)}
     opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Opportunity] != nil}
 
     # Find all product which were not created already
@@ -697,10 +697,22 @@ command :add do |c|
       project[CGI.escape("DE:Total Service Hours")] = li[:Total_Service_Hours__c]
       project.status = "IDA"
 
-      project.ownerID = user.ID if user != nil
+
+      if (li[:Product][:Name] == 'GD-ENT-EOR')
+        project.ownerID = "50e6f9f9001bccbdacb27a0417c60df2" #Tom Kolich
+      else
+        project.ownerID = user.ID if user != nil
+      end
+
       project["companyID"] =  company.ID
       project["categoryID"] = "50f5a7ee000d0278de51cc3a4d803e62"
-      project["groupID"] = "50f49e85000893b820341d23978dd05b"
+
+      if (li[:Product][:Name] == 'GD-ENT-EOR')
+        project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
+      else
+        project["groupID"] = "50f49e85000893b820341d23978dd05b"
+      end
+
       project["scheduleID"] = "50f558520003e0c8c8d1290e0d051571"
       project["milestonePathID"] = "50f5e5be001a53c6b9027b25d7b00854"
       project["ownerPrivileges"] = "APT"
@@ -708,7 +720,7 @@ command :add do |c|
       project["URL"] = "https://na6.salesforce.com/#{li[:Id].first}" if li[:Id].first != nil
       project[CGI.escape("DE:Salesforce ID")] = li[:Opportunity][:Id].first
 
-      if (li[:Product][:Name] == 'PS-INVESTMENT')
+      if (li[:Product][:Name] == 'PS-INVESTMENT' or li[:Product][:Name] == 'GD-ENT-EOR')
         project[CGI.escape("DE:Project Type")] = "Investment"
       else
         project[CGI.escape("DE:Project Type")] = "Implementation"
