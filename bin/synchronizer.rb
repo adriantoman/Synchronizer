@@ -30,33 +30,32 @@ command :test do |c|
 #  c.desc 'Execute only for one entity.'
 #  c.default_value false
 #  c.flag [:o, :only]
-
-
-
   c.desc 'Username to Attask'
   c.flag [:at_username]
 
   c.desc 'Password to Attask'
   c.flag [:at_password]
 
+  c.desc 'S3 access key'
+  c.flag [:s3_access]
+
+  s.desc 'S3 secret key'
+  c.flag [:s3_secret]
+
 
   c.action do |global_options,options,args|
     at_username = options[:at_username]
     at_password = options[:at_password]
-
+    s3_access = options[:s3_access]
+    s3_secret = options[:s3_secret]
 
 
     attask = Attask.client("gooddata",at_username,at_password)
 
-    projects = attask.project.search({:fields=>"ID",:customFields =>"DE:Salesforce ID"})
 
-    projects = projects.find_all{|p| p["DE:Salesforce ID"] != "N/A" and p["DE:Salesforce ID"] != nil}
+    s3 = Synchronizer::S3.new(s3_access,s3_secret,"gooddata_com_attask",@log)
+    s3.download_file("pd_timesheet.csv")
 
-    projects.each do |p|
-      p["URL"] = "https://na6.salesforce.com/#{p["DE:Salesforce ID"]}"
-      p.delete("DE:Salesforce ID")
-      attask.project.update(p)
-   end
 
 
 
