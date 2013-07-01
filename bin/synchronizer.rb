@@ -53,7 +53,7 @@ command :test do |c|
     attask = Attask.client("gooddata",at_username,at_password)
 
 
-    s3 = Synchronizer::S3.new(s3_access,s3_secret,"gooddata_com_attask",@log)
+    s3 = Synchronizer::S3Sync.new(s3_access,s3_secret,"gooddata_com_attask",@log)
     s3.download_file("pd_timesheet.csv")
 
 
@@ -574,7 +574,7 @@ command :init do |c|
       f.write(JSON.pretty_generate(main))
     end
 
-    s3 = Synchronizer::S3.new(s3_access,s3_secret,"gooddata_com_attask",@log)
+    s3 = Synchronizer::S3Sync.new(s3_access,s3_secret,"gooddata_com_attask",@log)
     s3.store_to_s3(export)
 
 
@@ -1212,7 +1212,7 @@ command :pagerduty do |c|
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
     attask = Attask.client("gooddata",at_username,at_password)
     begin
-      s3 = Synchronizer::S3.new(s3_access,s3_secret,"gooddata_com_attask",@log)
+      s3 = Synchronizer::S3Sync.new(s3_access,s3_secret,"gooddata_com_attask",@log)
 
       s3.download_file("pd_timesheet.csv")
       s3.delete_file("pd_timesheet.csv")

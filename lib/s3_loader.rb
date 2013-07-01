@@ -2,7 +2,7 @@ require 'aws/s3'
 
 module Synchronizer
 
-  class S3
+  class S3Sync
 
 
 
