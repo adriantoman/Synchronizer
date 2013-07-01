@@ -30,4 +30,5 @@ Gem::Specification.new do |s|
   s.add_dependency "aws"
   s.add_dependency "chronic"
   s.add_dependency "fastercsv"
+  s.add_dependency "google_drive"
 end
