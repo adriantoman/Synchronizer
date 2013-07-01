@@ -1,4 +1,3 @@
-require 'aws/s3'
 
 module Synchronizer
 
