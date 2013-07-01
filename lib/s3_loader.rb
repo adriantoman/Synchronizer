@@ -1,8 +1,8 @@
+require 'aws/s3'
 
 module Synchronizer
 
-  class S3Sync
-
+  class S3
 
 
     def initialize(access_key, secret_key, bucket,logger)
@@ -53,7 +53,6 @@ module Synchronizer
           :access_key_id     => @access_key,
           :secret_access_key => @secrect_key
       )
-      attask_bucket = Bucket.find("gooddata_com_attask")
       file = attask_bucket.find(name)
       file.delete
     end
