@@ -649,10 +649,12 @@ command :add do |c|
       s = salesforce_data.find{|s| s[:Id].first == li[:OpportunityId]}
       li[:Opportunity] = s
       pe = pricebookentry.find do |e|
-        e[:Id].first == li[:PricebookEntryId]
+        e[:Id] == li[:PricebookEntryId]
       end
+
+      fail "kokos"
       product = products.find do |p|
-        p[:Id].first == pe[:Product2Id]
+        p[:Id] == pe[:Product2Id]
       end
       li[:Product] = product
     end
@@ -678,7 +680,7 @@ command :add do |c|
     opportunityLineItem_data.each do |li|
 
 
-      accountName = account.output.find{|a| a[:Id].first == li[:Opportunity][:AccountId]}[:Name]
+      accountName = account.output.find{|a| a[:Id] == li[:Opportunity][:AccountId]}[:Name]
 
       company = companies.find{|c| c.name.casecmp(accountName) == 0 ? true : false}
       if (company == nil) then
@@ -691,7 +693,7 @@ command :add do |c|
       user = users.find{|u| u.emailAddr == "romeo.leon@gooddata.com"}
 
       project = Attask::Project.new()
-      project[CGI.escape("DE:Product ID")] = li[:Id].first
+      project[CGI.escape("DE:Product ID")] = li[:Id]
       project.name =  li[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + li[:Product][:Name]
       project[CGI.escape("DE:Budget Hours")] =  li[:Total_Service_Hours__c]
       project[CGI.escape("DE:Total Service Hours")] = li[:Total_Service_Hours__c]
@@ -717,8 +719,8 @@ command :add do |c|
       project["milestonePathID"] = "50f5e5be001a53c6b9027b25d7b00854"
       project["ownerPrivileges"] = "APT"
 
-      project["URL"] = "https://na6.salesforce.com/#{li[:Id].first}" if li[:Id].first != nil
-      project[CGI.escape("DE:Salesforce ID")] = li[:Opportunity][:Id].first
+      project["URL"] = "https://na6.salesforce.com/#{li[:Id]}" if li[:Id] != nil
+      project[CGI.escape("DE:Salesforce ID")] = li[:Opportunity][:Id]
 
       if (li[:Product][:Name] == 'PS-INVESTMENT' or li[:Product][:Name] == 'GD-ENT-EOR')
         project[CGI.escape("DE:Project Type")] = "Investment"
@@ -732,7 +734,7 @@ command :add do |c|
 
       project[CGI.escape("DE:Salesforce Type")] = li[:Opportunity][:Type]
 
-      @log.info "Creating project #{project.name} with SFDC ID #{li[:Id].first}"
+      @log.info "Creating project #{project.name} with SFDC ID #{li[:Id]}"
 
       attask.project.add(project)
       @work_done = true
