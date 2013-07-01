@@ -28,5 +28,6 @@ Gem::Specification.new do |s|
   s.add_dependency "pony"
   s.add_dependency "rforce"
   s.add_dependency "aws"
+  s.add_dependency "chronic"
 
 end
