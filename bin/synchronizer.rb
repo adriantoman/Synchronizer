@@ -11,7 +11,7 @@ require 'chronic'
 require 'fastercsv'
 require 'date'
 require "attask"
-require 'aws'
+require 'aws/s3'
 require 'cgi'
 require 'active_support/all'
 require 'logger'

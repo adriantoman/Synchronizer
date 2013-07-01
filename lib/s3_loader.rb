@@ -39,12 +39,9 @@ module Synchronizer
           :access_key_id     => @access_key,
           :secret_access_key => @secrect_key
       )
-
-      attask_bucket = Bucket.find("gooddata_com_attask")
-
-      file = attask_bucket.find(name)
+      file = AttaskBucket.find(name)
       File.open("data/pd_timesheet.csv", "w") do |f|
-        f.write(file.value)
+        f.write(file.read)
       end
     end
 
@@ -53,7 +50,7 @@ module Synchronizer
           :access_key_id     => @access_key,
           :secret_access_key => @secrect_key
       )
-      file = attask_bucket.find(name)
+      file = AttaskBucket.find(name)
       file.delete
     end
 
@@ -62,9 +59,9 @@ module Synchronizer
 
   end
 
-  #class AttaskBucket < AWS::S3::S3Object
-  #  set_current_bucket_to 'gooddata_com_attask'
-  #end
+  class AttaskBucket < AWS::S3::S3Object
+    set_current_bucket_to 'gooddata_com_attask'
+  end
 
 
 end
