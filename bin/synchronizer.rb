@@ -11,15 +11,16 @@ require 'chronic'
 require 'fastercsv'
 require 'date'
 require "attask"
-require "lib/synchronizer.rb"
-require "lib/helper.rb"
-require "lib/google_downloader.rb"
-require "lib/s3_loader.rb"
+require 'aws/s3'
 require 'cgi'
 require 'active_support/all'
 require 'logger'
 require "pony"
 require "csv"
+require "lib/synchronizer.rb"
+require "lib/helper.rb"
+require "lib/google_downloader.rb"
+require "lib/s3_loader.rb"
 include GLI
 
 program_desc 'Program for synchronizing task'
