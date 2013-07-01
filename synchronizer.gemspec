@@ -29,5 +29,5 @@ Gem::Specification.new do |s|
   s.add_dependency "rforce"
   s.add_dependency "aws"
   s.add_dependency "chronic"
-
+  s.add_dependency "fastercsv"
 end
