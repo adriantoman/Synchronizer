@@ -652,7 +652,6 @@ command :add do |c|
         e[:Id] == li[:PricebookEntryId]
       end
 
-      fail "kokos"
       product = products.find do |p|
         p[:Id] == pe[:Product2Id]
       end
