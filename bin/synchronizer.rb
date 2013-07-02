@@ -138,9 +138,9 @@ command :update do |c|
 
     sfdc_object = salesforce.getValueByField(:Id,project["DE:Salesforce ID"])
 
-    if sfdc_object != nil then
+    if sfdc_object.first != nil then
 
-        sfdc_object  = sfdc_object
+        sfdc_object = sfdc_object.first
 
         # UPDATE CONDITIONS -> Every time
         project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Type],"Salesforce Type")
