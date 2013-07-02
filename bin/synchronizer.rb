@@ -646,7 +646,7 @@ command :add do |c|
 
 
     opportunityLineItem_data.each do |li|
-      s = salesforce_data.find{|s| s[:Id].first == li[:OpportunityId]}
+      s = salesforce_data.find{|s| s[:Id] == li[:OpportunityId]}
       li[:Opportunity] = s
       pe = pricebookentry.find do |e|
         e[:Id] == li[:PricebookEntryId]
@@ -666,7 +666,7 @@ command :add do |c|
 
     # Find all product which were not created already
     opportunityLineItem_data = opportunityLineItem_data.find_all do |li|
-      project = projects.find {|p| !p["DE:Product ID"].nil? and p["DE:Product ID"].casecmp(li[:Id].first) == 0 ? true : false}
+      project = projects.find {|p| !p["DE:Product ID"].nil? and p["DE:Product ID"].casecmp(li[:Id]) == 0 ? true : false}
       if (project.nil?)
         true
       else
