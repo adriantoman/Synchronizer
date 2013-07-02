@@ -138,9 +138,9 @@ command :update do |c|
 
     sfdc_object = salesforce.getValueByField(:Id,project["DE:Salesforce ID"])
 
-      if sfdc_object.first != nil then
+    if sfdc_object != nil then
 
-        sfdc_object  = sfdc_object.first
+        sfdc_object  = sfdc_object
 
         # UPDATE CONDITIONS -> Every time
         project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Type],"Salesforce Type")
@@ -150,7 +150,7 @@ command :update do |c|
         if (project["categoryID"] == "50f5a7ee000d0278de51cc3a4d803e62") then
           project[CGI.escape("DE:Billing Type")] = sfdc_object[:Services_Type__c] unless helper.comparerString(project["DE:Billing Type"],sfdc_object[:Services_Type__c],"Billing Type")
           project[CGI.escape("DE:Service Type")] = sfdc_object[:Services_Type_Subcategory__c] unless helper.comparerString(project["DE:Service Type"],sfdc_object[:Services_Type_Subcategory__c],"Service Type")
-          project[CGI.escape("DE:Product ID")] = sfdc_object[:Id].first unless helper.comparerString(project["DE:Product ID"],sfdc_object[:Id].first,"Product ID")
+          project[CGI.escape("DE:Product ID")] = sfdc_object[:Id] unless helper.comparerString(project["DE:Product ID"],sfdc_object[:Id],"Product ID")
         end
 
         if (project["DE:Project Type"] == "Implementation")
@@ -309,13 +309,13 @@ command :update_product do |c|
 
 
     opportunityLineItem_data.each do |li|
-      s = salesforce_data.find{|s| s[:Id].first == li[:OpportunityId]}
+      s = salesforce_data.find{|s| s[:Id] == li[:OpportunityId]}
       li[:Opportunity] = s
       pe = pricebookentry.find do |e|
-        e[:Id].first == li[:PricebookEntryId]
+        e[:Id] == li[:PricebookEntryId]
       end
       product = products.find do |p|
-        p[:Id].first == pe[:Product2Id]
+        p[:Id] == pe[:Product2Id]
       end
       li[:Product] = product
     end
@@ -328,7 +328,7 @@ command :update_product do |c|
 
       helper = Synchronizer::Helper.new(project["ID"],project["name"],"project")
 
-      sfdc_object = opportunityLineItem_data.find {|li| li[:Id].first == project["DE:Product ID"]}
+      sfdc_object = opportunityLineItem_data.find {|li| li[:Id] == project["DE:Product ID"]}
 
 
       if (!sfdc_object.nil?)

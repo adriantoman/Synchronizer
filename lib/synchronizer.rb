@@ -57,9 +57,8 @@ module Synchronizer
       list = @output.find_all do |q|
           if (q[fieldName].class.to_s == "Array") then
             q[fieldName].first.casecmp(value) == 0 ? true : false
-
           else
-            return q[fieldName].casecmp(value) == 0 ? true : false
+            q[fieldName].casecmp(value) == 0 ? true : false
           end
       end
     end
@@ -93,7 +92,7 @@ module Synchronizer
 
     def notAlreadyCreated(array)
       @output = @output.find_all do |s|
-        projects = array.find_all {|p| p["DE:Salesforce ID"].casecmp(s[:Id].first) == 0 ? true : false}
+        projects = array.find_all {|p| p["DE:Salesforce ID"].casecmp(s[:Id]) == 0 ? true : false}
         if (projects != nil and projects.count > 0) then
           false
         else
@@ -104,7 +103,7 @@ module Synchronizer
 
     def notAlreadyCreated_out(output,array)
       output.find_all do |s|
-        projects = array.find_all {|p| p["DE:Salesforce ID"].casecmp(s[:Id].first) == 0 ? true : false}
+        projects = array.find_all {|p| p["DE:Salesforce ID"].casecmp(s[:Id]) == 0 ? true : false}
         if (projects != nil and projects.count > 0) then
           false
         else
