@@ -735,7 +735,9 @@ command :add do |c|
 
       @log.info "Creating project #{project.name} with SFDC ID #{li[:Id]}"
 
-      attask.project.add(project)
+      pp project
+
+      #attask.project.add(project)
       @work_done = true
       count = count + 1
 
