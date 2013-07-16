@@ -1413,13 +1413,17 @@ end
 
 pre do |global,command,options,args|
   next true if command.nil?
-  @log = Logger.new("log/migration_#{command.name}.log",'daily') if ENV["USERNAME"] != "adrian.toman"
-  @log = Logger.new(STDOUT,'daily') if ENV["USERNAME"] == "adrian.toman"
+
+  if (ENV["USERNAME"] != "adrian.toman")
+    @log = Logger.new("log/migration_#{command.name}.log",'daily')
+  else
+    @log = Logger.new(STDOUT,'daily')
+  end
   @work_done = false
 
 
   # Pre logic here
-  # Return true to proceed; false to abourt and not call the
+  # Return true to proceed; false t/root/RubymineProjects/Synchronizero abourt and not call the
   # chosen command
   # Use skips_pre before a command to skip this block
   # on that command only

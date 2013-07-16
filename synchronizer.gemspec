@@ -26,7 +26,7 @@ Gem::Specification.new do |s|
   s.add_dependency "attask"
   s.add_dependency "logger"
   s.add_dependency "pony"
-  s.add_dependency "rforce"
+  s.add_dependency "rforce","=0.11"
   s.add_dependency "chronic"
   s.add_dependency "fastercsv"
   s.add_dependency "google_drive"
