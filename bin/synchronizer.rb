@@ -17,6 +17,7 @@ require 'active_support/all'
 require 'logger'
 require "pony"
 require "csv"
+require "zlib"
 require "lib/synchronizer.rb"
 require "lib/helper.rb"
 require "lib/google_downloader.rb"
@@ -521,29 +522,29 @@ command :init do |c|
 
     attask = Attask.client("gooddata",at_username,at_password)
 
-    attask.project.exportToCsv({:filename => "project.csv",:filepath => export})
-    attask.assigment.exportToCsv({:filename => "assigment.csv",:filepath => export})
-    attask.baseline.exportToCsv({:filename => "baseline.csv",:filepath => export})
-    attask.baselinetask.exportToCsv({:filename => "baselinetask.csv",:filepath => export})
-    attask.category.exportToCsv({:filename => "category.csv",:filepath => export})
-    attask.company.exportToCsv({:filename => "company.csv",:filepath => export})
-    attask.expense.exportToCsv({:filename => "expense.csv",:filepath => export})
-    attask.expensetype.exportToCsv({:filename => "expensetype.csv",:filepath => export})
-    attask.group.exportToCsv({:filename => "group.csv",:filepath => export})
-    attask.hour.exportToCsv({:filename => "hour.csv",:filepath => export})
-    attask.hourtype.exportToCsv({:filename => "hourtype.csv",:filepath => export})
-    attask.issue.exportToCsv({:filename => "issue.csv",:filepath => export})
+    attask.project.exportToCsv({:filename => "project.csv",:filepath => export,:gzip => true})
+    attask.assigment.exportToCsv({:filename => "assigment.csv",:filepath => export,:gzip => true})
+    attask.baseline.exportToCsv({:filename => "baseline.csv",:filepath => export,:gzip => true})
+    attask.baselinetask.exportToCsv({:filename => "baselinetask.csv",:filepath => export,:gzip => true})
+    attask.category.exportToCsv({:filename => "category.csv",:filepath => export,:gzip => true})
+    attask.company.exportToCsv({:filename => "company.csv",:filepath => export,:gzip => true})
+    attask.expense.exportToCsv({:filename => "expense.csv",:filepath => export,:gzip => true})
+    attask.expensetype.exportToCsv({:filename => "expensetype.csv",:filepath => export,:gzip => true})
+    attask.group.exportToCsv({:filename => "group.csv",:filepath => export,:gzip => true})
+    attask.hour.exportToCsv({:filename => "hour.csv",:filepath => export,:gzip => true})
+    attask.hourtype.exportToCsv({:filename => "hourtype.csv",:filepath => export,:gzip => true})
+    attask.issue.exportToCsv({:filename => "issue.csv",:filepath => export,:gzip => true})
     ###attask.rate.exportToCsv({:filename => "rate.csv",:filepath => "/home/adrian.toman/export/"})
-    attask.resourcepool.exportToCsv({:filename => "resourcepool.csv",:filepath => export})
-    attask.risk.exportToCsv({:filename => "risk.csv",:filepath => export})
-    attask.risktype.exportToCsv({:filename => "risktype.csv",:filepath => export})
-    attask.role.exportToCsv({:filename => "role.csv",:filepath => export})
-    attask.schedule.exportToCsv({:filename => "schedule.csv",:filepath => export})
-    attask.task.exportToCsv({:filename => "task.csv",:filepath => export})
-    attask.team.exportToCsv({:filename => "team.csv",:filepath => export})
-    attask.timesheet.exportToCsv({:filename => "timesheet.csv",:filepath => export})
-    attask.user.exportToCsv({:filename => "user.csv",:filepath => export})
-    attask.milestone.exportToCsv({:filename => "milestone.csv",:filepath => export})
+    attask.resourcepool.exportToCsv({:filename => "resourcepool.csv",:filepath => export,:gzip => true})
+    attask.risk.exportToCsv({:filename => "risk.csv",:filepath => export,:gzip => true})
+    attask.risktype.exportToCsv({:filename => "risktype.csv",:filepath => export,:gzip => true})
+    attask.role.exportToCsv({:filename => "role.csv",:filepath => export,:gzip => true})
+    attask.schedule.exportToCsv({:filename => "schedule.csv",:filepath => export,:gzip => true})
+    attask.task.exportToCsv({:filename => "task.csv",:filepath => export,:gzip => true})
+    attask.team.exportToCsv({:filename => "team.csv",:filepath => export,:gzip => true})
+    attask.timesheet.exportToCsv({:filename => "timesheet.csv",:filepath => export,:gzip => true})
+    attask.user.exportToCsv({:filename => "user.csv",:filepath => export,:gzip => true})
+    attask.milestone.exportToCsv({:filename => "milestone.csv",:filepath => export,:gzip => true})
 
 
     # Generate Metadata
