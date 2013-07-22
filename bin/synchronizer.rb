@@ -722,7 +722,7 @@ command :add do |c|
       project["URL"] = "https://na6.salesforce.com/#{li[:Id]}" if li[:Id] != nil
       project[CGI.escape("DE:Salesforce ID")] = li[:Opportunity][:Id]
 
-      if (li[:Product][:Name] == 'PS-INVESTMENT' or li[:Product][:Name] == 'GD-ENT-EOR')
+      if (li[:Product][:Name] == 'PS-INVESTMENT')
         project[CGI.escape("DE:Project Type")] = "Investment"
       else
         project[CGI.escape("DE:Project Type")] = "Implementation"
