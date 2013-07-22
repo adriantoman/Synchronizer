@@ -724,6 +724,8 @@ command :add do |c|
 
       if (li[:Product][:Name] == 'PS-INVESTMENT')
         project[CGI.escape("DE:Project Type")] = "Investment"
+      elsif (li[:Product][:Name] == 'GD-ENT-EOR')
+        project[CGI.escape("DE:Project Type")] = "Customer Success"
       else
         project[CGI.escape("DE:Project Type")] = "Implementation"
       end
