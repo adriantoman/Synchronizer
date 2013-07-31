@@ -41,7 +41,7 @@ module Synchronizer
       )
       file = AttaskBucket.find(name)
       File.open("data/pd_timesheet.csv", "w") do |f|
-        f.write(file.read)
+        f.write(file.value)
       end
     end
 
