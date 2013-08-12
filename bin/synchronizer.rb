@@ -610,7 +610,7 @@ command :add do |c|
 
     @user = {
         "West" => "gautam.kher@gooddata.com",
-        "Partner" => "romeo.leon@gooddata.com",
+        "Partner" => "gautam.kher@gooddata.com",
         "East" => "matt.maudlin@gooddata.com",
         "Europe" => "martin.hapl@gooddata.com"
     }
@@ -689,7 +689,7 @@ command :add do |c|
          company = attask.company.add(company).first
       end
 
-      user = users.find{|u| u.emailAddr == "romeo.leon@gooddata.com"}
+      user = users.find{|u| u.emailAddr == "gautam.kher@gooddata.com"}
 
       project = Attask::Project.new()
       project[CGI.escape("DE:Product ID")] = li[:Id]
@@ -969,7 +969,7 @@ command :billable_check do |c|
 
     @user = {
         "West" => "gautam.kher@gooddata.com",
-        "Partner" => "romeo.leon@gooddata.com",
+        "Partner" => "gautam.kher@gooddata.com",
         "East" => "matt.maudlin@gooddata.com",
         "Europe" => "martin.hapl@gooddata.com"
     }
