@@ -107,18 +107,7 @@ command :update do |c|
     at_password = options[:at_password]
 
 
-    @mapping = {
-        "Intern" => "50f73f80002b9038434b0b21c00abb01",
-        "Solution Architect" => "50eaa2290009eeba6d208a473efbb83d",
-        "Practice Manager" => "50eaa298000a530cb7ba2ce1bf82bab1",
-        "Consultant" => "50ad5628000469c57167f54cb5289999",
-        "Architect" => "50eaa26e0009eed64d1aa82aa78b82ac",
-        "Director" => "50eaa2380009eec4c88cd0b565099749",
-        "SE Team Lead" => "50eaa20c0009ee98166e57ccc6c187b5",
-        "Solution Engineer" => "50eaa1f60009ee8d8f23380a8a050c9b",
-        "Contractor" => "50f02f810002afbea77b8672f462c330",
-        "Customer Success Manager" => "50f54dfe00033ea4189871c0c749bc49"
-    }
+
 
     attask = Attask.client("gooddata",at_username,at_password)
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
@@ -275,7 +264,8 @@ command :update_product do |c|
         "Director" => "50eaa2380009eec4c88cd0b565099749",
         "SE Team Lead" => "50eaa20c0009ee98166e57ccc6c187b5",
         "Solution Engineer" => "50eaa1f60009ee8d8f23380a8a050c9b",
-        "Contractor" => "50f02f810002afbea77b8672f462c330"
+        "Contractor" => "50f02f810002afbea77b8672f462c330",
+        "Customer Success Manager" => "50f54dfe00033ea4189871c0c749bc49"
     }
 
     attask = Attask.client("gooddata",at_username,at_password)
