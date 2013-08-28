@@ -149,10 +149,10 @@ command :update do |c|
 
 
         # STATUS == Awaiting Sign-off then Condition Type = Manual and Status = On Target
-        if (project["status"] == "ASO") then
-          project["condition"] = "ON" unless helper.comparerString(project["condition"],"ON","condition") # On-Target
-          project["conditionType"] = "MN" unless helper.comparerString(project["conditionType"],"MN","conditionType") # Manual
-        end
+        #if (project["status"] == "ASO") then
+        #  project["condition"] = "ON" unless helper.comparerString(project["condition"],"ON","condition") # On-Target
+        #  project["conditionType"] = "MN" unless helper.comparerString(project["conditionType"],"MN","conditionType") # Manual
+        #end
 
         # Update budget if there is only one project with specific SFDC_ID
         duplicated_sfdc = projects.find_all{|p| p["DE:Salesforce ID"] != nil and project["DE:Salesforce ID"] != nil and project["DE:Project Type"] != "Maintenance" and p["DE:Salesforce ID"].casecmp(project["DE:Salesforce ID"]) == 0 ? true : false}
@@ -344,10 +344,10 @@ command :update_product do |c|
         end
 
         # STATUS == Awaiting Sign-off then Condition Type = Manual and Status = On Target
-        if (project["status"] == "ASO") then
-          project["condition"] = "ON" unless helper.comparerString(project["condition"],"ON","condition") # On-Target
-          project["conditionType"] = "MN" unless helper.comparerString(project["conditionType"],"MN","conditionType") # Manual
-        end
+        #if (project["status"] == "ASO") then
+        #  project["condition"] = "ON" unless helper.comparerString(project["condition"],"ON","condition") # On-Target
+        #  project["conditionType"] = "MN" unless helper.comparerString(project["conditionType"],"MN","conditionType") # Manual
+        #end
 
         # Update budget if there is only one project with specific SFDC_ID
         duplicated_sfdc = projects.find_all{|p| p["DE:Product ID"] != nil and project["DE:Product ID"] != nil and project["DE:Project Type"] == "Implementation" and p["DE:Product ID"].casecmp(project["DE:Product ID"]) == 0 ? true : false}
