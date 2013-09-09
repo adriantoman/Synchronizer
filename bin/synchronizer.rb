@@ -330,7 +330,7 @@ command :update_product do |c|
         # Additional Project Information - Type of Custome Fields
         if (project["categoryID"] == "50f5a7ee000d0278de51cc3a4d803e62") then
 
-          project.name =  (sfdc_object[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + sfdc_object[:Product][:Name]) unless helper.comparerString(project["name"],(sfdc_object[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + sfdc_object[:Product][:Name]),"name")
+          #project.name =  (sfdc_object[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + sfdc_object[:Product][:Name]) unless helper.comparerString(project["name"],(sfdc_object[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + sfdc_object[:Product][:Name]),"name")
           project[CGI.escape("DE:Service Type")] = sfdc_object[:Service_Type__c] unless helper.comparerString(project["DE:Service Type"],sfdc_object[:Service_Type__c],"Service Type")
           project[CGI.escape("DE:Billing Type")] = sfdc_object[:Services_Billing_Type__c] unless helper.comparerString(project["DE:Billing Type"],sfdc_object[:Services_Billing_Type__c],"Billing Type")
           project[CGI.escape("DE:Hours per Period")] = sfdc_object[:Service_Hours_per_Period__c] unless helper.comparerString(project["DE:Hours per Period"],sfdc_object[:Service_Hours_per_Period__c],"Hours per Period")
