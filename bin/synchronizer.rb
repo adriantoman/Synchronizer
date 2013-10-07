@@ -107,7 +107,18 @@ command :update do |c|
     at_password = options[:at_password]
 
 
-
+    @mapping = {
+        "Intern" => "50f73f80002b9038434b0b21c00abb01",
+        "Solution Architect" => "50eaa2290009eeba6d208a473efbb83d",
+        "Practice Manager" => "50eaa298000a530cb7ba2ce1bf82bab1",
+        "Consultant" => "50ad5628000469c57167f54cb5289999",
+        "Architect" => "50eaa26e0009eed64d1aa82aa78b82ac",
+        "Director" => "50eaa2380009eec4c88cd0b565099749",
+        "SE Team Lead" => "50eaa20c0009ee98166e57ccc6c187b5",
+        "Solution Engineer" => "50eaa1f60009ee8d8f23380a8a050c9b",
+        "Contractor" => "50f02f810002afbea77b8672f462c330",
+        "Customer Success Manager" => "50f54dfe00033ea4189871c0c749bc49"
+    }
 
     attask = Attask.client("gooddata",at_username,at_password)
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
@@ -116,7 +127,7 @@ command :update do |c|
     projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Practice Group,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours"})
 
     salesforce = Synchronizer::SalesForce.new( sf_username,sf_password)
-    salesforce.query("SELECT Amount, Id, Name, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c FROM Opportunity",{:values => [:Id,:Amount,:Name,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type],:as_hash => true})
+    salesforce.query("SELECT Amount, Id, Name, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,Celigo_Trigger_Amount__c FROM Opportunity",{:values => [:Id,:Amount,:Name,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:Celigo_Trigger_Amount],:as_hash => true})
 
     count = 0
 
@@ -135,6 +146,7 @@ command :update do |c|
         # UPDATE CONDITIONS -> Every time
         project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Type],"Salesforce Type")
         project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Name],"Salesforce Name")
+        project[CGI.escape("DE:MRR")] = sfdc_object[:Celigo_Trigger_Amount__c] unless helper.comparerString(project["DE:MRR"],sfdc_object[:Celigo_Trigger_Amount__c],"MRR")
 
         # Additional Project Information - Type of Custome Fields
         if (project["categoryID"] == "50f5a7ee000d0278de51cc3a4d803e62") then
@@ -272,10 +284,10 @@ command :update_product do |c|
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
-    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours"})
+    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours.DE:MRR"})
 
     salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
-    salesforce.query("SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId],:as_hash => true})
+    salesforce.query("SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId,Celigo_Trigger_Amount__c FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId,:Celigo_Trigger_Amount],:as_hash => true})
 
     account = Synchronizer::SalesForce.new(sf_username,sf_password)
     account.query("SELECT Id, Name FROM Account",{:values => [:Id,:Name],:as_hash => true})
@@ -326,6 +338,11 @@ command :update_product do |c|
 
         project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Opportunity][:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Opportunity][:Type],"Salesforce Type")
         project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Opportunity][:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Opportunity][:Name],"Salesforce Name")
+        project[CGI.escape("DE:MRR")] = sfdc_object[:Opportunity][:Celigo_Trigger_Amount__c] unless helper.comparerString(project["DE:MRR"],sfdc_object[:Opportunity][:Celigo_Trigger_Amount__c],"MRR")
+
+
+
+
 
         # Additional Project Information - Type of Custome Fields
         if (project["categoryID"] == "50f5a7ee000d0278de51cc3a4d803e62") then
@@ -1138,24 +1155,6 @@ command :move do |c|
 
       #pp p["DE:Running on"]
 
-      case (p["DE:Running on"])
-        when "clover-prod2":
-          task["DE:Graph"]= "app"
-          task["name"] = "Main graph"
-        when "clover-prod3":
-          task["DE:Graph"]= "app"
-          task["name"] = "Main graph"
-        when "clover-test2":
-          task["DE:Graph"]= "app"
-          task["name"] = "Main graph"
-        when "clover-dev2":
-          task["DE:Graph"]= "app"
-          task["name"] = "Main graph"
-        else
-          task["DE:Graph"]= "CHANGE"
-          task["name"] = "CHANGE"
-      end
-      task["DE:CRON"] = p["DE:CRON"]
 
       attask.task.add(task)
 
