@@ -697,7 +697,7 @@ command :add do |c|
          company = attask.company.add(company).first
       end
 
-      user = users.find{|u| u.emailAddr == "glenn.chiu@gooddata.com"}
+      user = users.find{|u| u.emailAddr == "miloslav.zientek@gooddata.com"}
 
       project = Attask::Project.new()
       project[CGI.escape("DE:Product ID")] = li[:Id]
