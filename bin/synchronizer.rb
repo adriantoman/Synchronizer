@@ -306,13 +306,15 @@ command :update_product do |c|
 
 
     #opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0 }
-    salesforce.filter("6 - CLOSED WON")
+
+    #salesforce.filter("6 - CLOSED WON")
     salesforce_data = salesforce.output
 
 
 
     opportunityLineItem_data.each do |li|
       s = salesforce_data.find{|s| s[:Id] == li[:OpportunityId]}
+
       li[:Opportunity] = s
       pe = pricebookentry.find do |e|
         e[:Id] == li[:PricebookEntryId]
