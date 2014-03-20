@@ -284,7 +284,7 @@ command :update_product do |c|
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
-    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours,DE:MRR"})
+    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours,DE:MRR,DE:Investment Hours,DE:Investment Reason"})
 
     salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
     salesforce.query("SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId,Celigo_Trigger_Amount__c FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId,:Celigo_Trigger_Amount],:as_hash => true})
@@ -301,7 +301,7 @@ command :update_product do |c|
     products = products.output
 
     opportunityLineItem = Synchronizer::SalesForce.new(sf_username,sf_password)
-    opportunityLineItem.query("SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId,Service_Type__c,Services_Billing_Type__c FROM OpportunityLineItem",{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId,:Service_Type__c,:Services_Billing_Type__c],:as_hash => true})
+    opportunityLineItem.query("SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId,Service_Type__c,Services_Billing_Type__c,Approved_Investment_Hours__c,Investment_Reason__c FROM OpportunityLineItem",{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId,:Service_Type__c,:Services_Billing_Type__c,:Approved_Investment_Hours__c,:Investment_Reason__c],:as_hash => true})
     opportunityLineItem_data = opportunityLineItem.output
 
 
@@ -355,7 +355,8 @@ command :update_product do |c|
           project[CGI.escape("DE:Hours per Period")] = sfdc_object[:Service_Hours_per_Period__c] unless helper.comparerString(project["DE:Hours per Period"],sfdc_object[:Service_Hours_per_Period__c],"Hours per Period")
           project[CGI.escape("DE:Number of Periods")] = sfdc_object[:Number_of_Periods__c] unless helper.comparerString(project["DE:Number of Periods"],sfdc_object[:Number_of_Periods__c],"Number of Periods")
           project[CGI.escape("DE:Expiration Period")] = sfdc_object[:Expiration_Period__c] unless helper.comparerString(project["DE:Expiration Period"],sfdc_object[:Expiration_Period__c],"Expiration Period")
-
+          project[CGI.escape("DE:Investment Hours")] = sfdc_object[:Approved_Investment_Hours__c] unless helper.comparerString(project["DE:Investment Hours"],sfdc_object[:Approved_Investment_Hours__c],"Investment Hours")
+          project[CGI.escape("DE:Investment Reason")] = sfdc_object[:Investment_Reason__c] unless helper.comparerString(project["DE:Investment Reason"],sfdc_object[:Investment_Reason__c],"Investment Reason")
         end
 
         if (project["DE:Project Type"] == "Implementation")
@@ -647,7 +648,7 @@ command :add do |c|
 
 
     opportunityLineItem = Synchronizer::SalesForce.new(sf_username,sf_password)
-    opportunityLineItem.query("SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId FROM OpportunityLineItem",{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId],:as_hash => true})
+    opportunityLineItem.query("SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId,Approved_Investment_Hours__c FROM OpportunityLineItem",{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId,:Approved_Investment_Hours__c],:as_hash => true})
     opportunityLineItem_data = opportunityLineItem.output
 
     salesforce.filter("6 - CLOSED WON")
@@ -669,11 +670,11 @@ command :add do |c|
     end
 
 
-    #and Float(s[:X1st_year_Services_Total__c]) > 0 and Float(s[:PS_Hours__c]) == 0
-
-    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (!li[:Product].nil? and (li[:Product][:Name] == 'PS-INVESTMENT' or li[:Product][:Name] == 'GD-ENT-EOR') and Float(li[:Total_Service_Hours__c]) > 0)}
+    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (li[:Product_Family__c] == "Service" and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c]))}
     opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Opportunity] != nil}
 
+
+    #and Float(li[:TotalPrice]) > 0
     # Find all product which were not created already
     opportunityLineItem_data = opportunityLineItem_data.find_all do |li|
       project = projects.find {|p| !p["DE:Product ID"].nil? and p["DE:Product ID"].casecmp(li[:Id]) == 0 ? true : false}
@@ -688,6 +689,8 @@ command :add do |c|
 
     opportunityLineItem_data.each do |li|
 
+
+      notification_to = {}
 
       accountName = account.output.find{|a| a[:Id] == li[:Opportunity][:AccountId]}[:Name]
 
@@ -709,10 +712,19 @@ command :add do |c|
       project.status = "IDA"
 
 
-      if (li[:Product][:Name] == 'GD-ENT-EOR')
-        project.ownerID = "50e6f9f9001bccbdacb27a0417c60df2" #Tom Kolich
-      else
-        project.ownerID = user.ID if user != nil
+      if (!li[:Opportunity][:Services_Type_Subcategory__c].nil? and li[:Opportunity][:Services_Type_Subcategory__c] == "EOR")
+        project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+        notification_to = {:to => "tom.kolich@gooddata.com"}
+      elsif (li[:Opportunity][:Type] == "Powered by")
+        project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
+        notification_to[:to] = 'martin.hapl@gooddata.com'
+        notification_to[:cc] = ['karel.novak@gooddata.com','michal.hauzirek@gooddata.com','jan.cisar@gooddata.com']
+      elsif (li[:Opportunity][:Type] == "Direct")
+        project.ownerID = users.find{|u| u.username == "matt.maudlin@gooddata.com"}.ID
+        notification_to = {
+            :to => 'matt.maudlin@gooddata.com',
+            :cc => ['emily.rugaber@gooddata.com','mike.connors@gooddata.com']
+        }
       end
 
       project["companyID"] =  company.ID
@@ -731,10 +743,12 @@ command :add do |c|
       project["URL"] = "https://na6.salesforce.com/#{li[:Id]}" if li[:Id] != nil
       project[CGI.escape("DE:Salesforce ID")] = li[:Opportunity][:Id]
 
-      if (li[:Product][:Name] == 'PS-INVESTMENT')
-        project[CGI.escape("DE:Project Type")] = "Investment"
-      else
+      #li[:Product][:Name] == 'PS-INVESTMENT'
+
+      if (Float(li[:TotalPrice]) > 0)
         project[CGI.escape("DE:Project Type")] = "Implementation"
+      elsif (Float(li[:TotalPrice]) == 0 and Float(li[:Approved_Investment_Hours__c] == Float(li[:Total_Service_Hours__c])))
+        project[CGI.escape("DE:Project Type")] = "Investment"
       end
 
       project[CGI.escape("DE:Hours per Period")] = li[:Service_Hours_per_Period__c]
@@ -745,7 +759,9 @@ command :add do |c|
 
       @log.info "Creating project #{project.name} with SFDC ID #{li[:Id]}"
 
-      attask.project.add(project)
+      project = attask.project.add(project)[0]
+
+      Pony.mail(:to => notification_to[:to],:cc => notification_to[:cc],:from => 'ms@gooddata.com', :subject => "New project with #{project.name} was create in attask.", :body => "Project link: https://gooddata.attask-ondemand.com/project/view?ID=#{project.ID}")
       @work_done = true
       count = count + 1
 
