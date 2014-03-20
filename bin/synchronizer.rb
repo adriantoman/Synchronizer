@@ -391,6 +391,8 @@ command :update_product do |c|
         project.delete("DE:Number of Periods")
         project.delete("DE:Expiration Period")
         project.delete("DE:Total Service Hours")
+        project.delete("DE:Investment Hours")
+        project.delete("DE:Investment Reason")
 
         attask.project.update(project) if helper.changed
         helper.printLog(@log) if helper.changed
