@@ -716,12 +716,15 @@ command :add do |c|
 
       if (!li[:Opportunity][:Services_Type_Subcategory__c].nil? and li[:Opportunity][:Services_Type_Subcategory__c] == "EOR")
         project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+        project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
         notification_to = {:to => "tom.kolich@gooddata.com"}
       elsif (li[:Opportunity][:Type] == "Powered by")
         project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
         notification_to[:to] = 'martin.hapl@gooddata.com'
         notification_to[:cc] = ['karel.novak@gooddata.com','michal.hauzirek@gooddata.com','jan.cisar@gooddata.com']
+        project["groupID"] = "51dece1700022dc5b57063720458e8d2"
       elsif (li[:Opportunity][:Type] == "Direct")
+        project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
         project.ownerID = users.find{|u| u.username == "matt.maudlin@gooddata.com"}.ID
         notification_to = {
             :to => 'matt.maudlin@gooddata.com',
@@ -732,11 +735,11 @@ command :add do |c|
       project["companyID"] =  company.ID
       project["categoryID"] = "50f5a7ee000d0278de51cc3a4d803e62"
 
-      if (li[:Product][:Name] == 'GD-ENT-EOR')
-        project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
-      else
-        project["groupID"] = "50f49e85000893b820341d23978dd05b"
-      end
+      #if (li[:Product][:Name] == 'GD-ENT-EOR')
+      #  project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
+      #else
+      #  project["groupID"] = "50f49e85000893b820341d23978dd05b"
+      #end
 
       project["scheduleID"] = "50f558520003e0c8c8d1290e0d051571"
       project["milestonePathID"] = "50f5e5be001a53c6b9027b25d7b00854"
