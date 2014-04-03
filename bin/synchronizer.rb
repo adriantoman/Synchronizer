@@ -286,6 +286,9 @@ command :update_product do |c|
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
     projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours,DE:MRR,DE:Investment Hours,DE:Investment Reason"})
 
+    #fail "kokos"
+
+
     salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
     salesforce.query("SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId,Celigo_Trigger_Amount__c FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId,:Celigo_Trigger_Amount],:as_hash => true})
 
@@ -377,6 +380,41 @@ command :update_product do |c|
           project.budget =  sfdc_object[:TotalPrice] unless helper.comparerString(project["budget"],sfdc_object[:TotalPrice],"budget")
         end
 
+
+        # For martin request there is action connected to Execute field in Attask
+        # In case that Execute! is enabled and task has statul CPL or Planned Hours < Actual Hours we will put Actual Hours to Planned hours
+        #if (project["DE:Align Planned hours with Actual"] == "Execute!")
+        #  #tasks = attask.task.search({:fields => "ID,status,workRequired,actualWork,durationType",:customFields => ""},{:projectID => project.ID})
+        #
+        #  tasks = attask.task.search({:fields => "ID,status,workRequired,actualWork,durationType",:customFields => ""},{:ID => "532c3d9300251222f4e6fbd725c98911"})
+        #
+        #
+        #  tasks.each do |task|
+        #    pp task
+        #    puts "------------------------------------------"
+        #    if (task["status"] == "CPL")
+        #      puts "THIS IS COMPLETED LEAF"
+        #      #task["status"] = "INP"
+        #      #attask.task.update(task)
+        #      task["workRequired"] = 180
+        #      #task["status"] = "CPL"
+        #      task["durationType"] = "A"
+        #      attask.task.update(task)
+        #    elsif (task["workRequired"] < task["actualWork"]*60)
+        #      puts "THIS IS REQUIRED < ACTUAL LEAF"
+        #      pp task
+        #      task["workRequired"] = (task["actualWork"] * 60).to_i
+        #      task["durationType"] = "A"
+        #      attask.task.update(task)
+        #    end
+        #  end
+        #
+        #  fail "kokos"
+        #
+        #  project[CGI.escape("DE:Align Planned hours with Actual")] = ""
+        #end
+
+
         project.delete("DE:Salesforce ID")
         project.delete("DE:Project Type")
         project.delete("DE:Salesforce Type")
@@ -393,8 +431,10 @@ command :update_product do |c|
         project.delete("DE:Total Service Hours")
         project.delete("DE:Investment Hours")
         project.delete("DE:Investment Reason")
+        #project.delete("DE:Align Planned hours with Actual")
 
         attask.project.update(project) if helper.changed
+
         helper.printLog(@log) if helper.changed
         @work_done = true if helper.changed
 
@@ -439,6 +479,14 @@ command :update_product do |c|
 
           end
         end
+
+
+
+
+
+
+
+
       end
 
     end
@@ -558,6 +606,8 @@ command :init do |c|
     attask.user.exportToCsv({:filename => "user.csv",:filepath => export,:gzip => true})
     attask.milestone.exportToCsv({:filename => "milestone.csv",:filepath => export,:gzip => true})
 
+    attask.project.exportToCsv({:fields => "actualCompletionDate,actualStartDate,DE:Project PID,DE:Project Type,DE:Salesforce ID,DE:Salesforce Type,DE:Solution Architect,.DE:Solution Engineer,description,ID,ownerID,percentComplete,status,lastUpdateDate,plannedStartDate,plannedCompletionDate,projectedStartDate,projectedCompletionDate,DE:Salesforce Name,name", :filename => "project_fix.csv",:filepath => export})
+
 
     # Generate Metadata
     main = Hash.new
@@ -671,10 +721,8 @@ command :add do |c|
       li[:Product] = product
     end
 
-
-    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (li[:Product_Family__c] == "Service" and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c]))}
+    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (li[:Product_Family__c] == "Service" and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) or ( (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST') and Float(li[:Total_Service_Hours__c]) > 0)}
     opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Opportunity] != nil}
-
 
     #and Float(li[:TotalPrice]) > 0
     # Find all product which were not created already
@@ -714,7 +762,7 @@ command :add do |c|
       project.status = "IDA"
 
 
-      if (!li[:Opportunity][:Services_Type_Subcategory__c].nil? and li[:Opportunity][:Services_Type_Subcategory__c] == "EOR")
+      if ((!li[:Opportunity][:Services_Type_Subcategory__c].nil? and li[:Opportunity][:Services_Type_Subcategory__c] == "EOR") or (li[:Product][:Name] == 'GD-ENT-EOR') or (li[:Product][:Name] == 'EOR-CST'))
         project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
         notification_to = {:to => "tom.kolich@gooddata.com"}
@@ -754,6 +802,8 @@ command :add do |c|
         project[CGI.escape("DE:Project Type")] = "Implementation"
       elsif (Float(li[:TotalPrice]) == 0 and Float(li[:Approved_Investment_Hours__c] == Float(li[:Total_Service_Hours__c])))
         project[CGI.escape("DE:Project Type")] = "Investment"
+      elsif (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST')
+        project[CGI.escape("DE:Project Type")] = "Customer Success"
       end
 
       project[CGI.escape("DE:Hours per Period")] = li[:Service_Hours_per_Period__c]
@@ -766,11 +816,9 @@ command :add do |c|
 
       project = attask.project.add(project)[0]
 
-      Pony.mail(:to => notification_to[:to],:cc => notification_to[:cc],:from => 'ms@gooddata.com', :subject => "New project with #{project.name} was create in attask.", :body => "Project link: https://gooddata.attask-ondemand.com/project/view?ID=#{project.ID}")
+      Pony.mail(:to => notification_to[:to],:cc => notification_to[:cc],:from => 'attask@gooddata.com', :subject => "New project with #{project.name} was create in attask.", :body => "Project link: https://gooddata.attask-ondemand.com/project/view?ID=#{project.ID}")
       @work_done = true
       count = count + 1
-
-
     end
   end
 end
