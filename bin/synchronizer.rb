@@ -800,7 +800,7 @@ command :add do |c|
 
       if (Float(li[:TotalPrice]) > 0)
         project[CGI.escape("DE:Project Type")] = "Implementation"
-      elsif (Float(li[:TotalPrice]) == 0 and Float(li[:Approved_Investment_Hours__c] == Float(li[:Total_Service_Hours__c])))
+      elsif (Float(li[:TotalPrice]) == 0 and Float(li[:Approved_Investment_Hours__c]) == Float(li[:Total_Service_Hours__c]))
         project[CGI.escape("DE:Project Type")] = "Investment"
       elsif (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST')
         project[CGI.escape("DE:Project Type")] = "Customer Success"
