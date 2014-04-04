@@ -610,7 +610,9 @@ command :init do |c|
                                   :fields => "actualCompletionDate,actualStartDate,description,ID,ownerID,percentComplete,status,lastUpdateDate,plannedStartDate,plannedCompletionDate,projectedStartDate,projectedCompletionDate,name",
                                   :customFields => "DE:Project PID,DE:Project Type,DE:Salesforce ID,DE:Salesforce Type,DE:Solution Architect,DE:Solution Engineer,DE:Salesforce Name",
                                   :filename => "project_fix.csv",
-                                  :filepath => export})
+                                  :filepath => export,
+                                  :gzip => true
+                               })
 
     # Generate Metadata
     main = Hash.new
