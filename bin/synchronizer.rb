@@ -606,8 +606,11 @@ command :init do |c|
     attask.user.exportToCsv({:filename => "user.csv",:filepath => export,:gzip => true})
     attask.milestone.exportToCsv({:filename => "milestone.csv",:filepath => export,:gzip => true})
 
-    attask.project.exportToCsv({:fields => "actualCompletionDate,actualStartDate,DE:Project PID,DE:Project Type,DE:Salesforce ID,DE:Salesforce Type,DE:Solution Architect,.DE:Solution Engineer,description,ID,ownerID,percentComplete,status,lastUpdateDate,plannedStartDate,plannedCompletionDate,projectedStartDate,projectedCompletionDate,DE:Salesforce Name,name", :filename => "project_fix.csv",:filepath => export})
-
+    attask.project.exportToCsv({
+                                  :fields => "actualCompletionDate,actualStartDate,description,ID,ownerID,percentComplete,status,lastUpdateDate,plannedStartDate,plannedCompletionDate,projectedStartDate,projectedCompletionDate,name",
+                                  :customFields => "DE:Project PID,DE:Project Type,DE:Salesforce ID,DE:Salesforce Type,DE:Solution Architect,DE:Solution Engineer,DE:Salesforce Name",
+                                  :filename => "project_fix.csv",
+                                  :filepath => export})
 
     # Generate Metadata
     main = Hash.new
