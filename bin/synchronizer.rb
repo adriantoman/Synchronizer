@@ -768,20 +768,24 @@ command :add do |c|
 
 
       if ((!li[:Opportunity][:Services_Type_Subcategory__c].nil? and li[:Opportunity][:Services_Type_Subcategory__c] == "EOR") or (li[:Product][:Name] == 'GD-ENT-EOR') or (li[:Product][:Name] == 'EOR-CST'))
-        project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+        #project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+        project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
         notification_to = {:to => "tom.kolich@gooddata.com"}
+        notification_to[:cc] = ["jiri.stovicek@gooddata.com"]
       elsif (li[:Opportunity][:Type] == "Powered by")
-        project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
+        #project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
+        project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         notification_to[:to] = 'martin.hapl@gooddata.com'
-        notification_to[:cc] = ['karel.novak@gooddata.com','michal.hauzirek@gooddata.com','jan.cisar@gooddata.com']
+        notification_to[:cc] = ['karel.novak@gooddata.com','michal.hauzirek@gooddata.com','jan.cisar@gooddata.com',"jiri.stovicek@gooddata.com"]
         project["groupID"] = "51dece1700022dc5b57063720458e8d2"
       elsif (li[:Opportunity][:Type] == "Direct")
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
-        project.ownerID = users.find{|u| u.username == "matt.maudlin@gooddata.com"}.ID
+        #project.ownerID = users.find{|u| u.username == "matt.maudlin@gooddata.com"}.ID
+        project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         notification_to = {
             :to => 'matt.maudlin@gooddata.com',
-            :cc => ['emily.rugaber@gooddata.com','mike.connors@gooddata.com']
+            :cc => ['emily.rugaber@gooddata.com','mike.connors@gooddata.com',"jiri.stovicek@gooddata.com"]
         }
       end
 
