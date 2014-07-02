@@ -784,7 +784,7 @@ command :add do |c|
         #project.ownerID = users.find{|u| u.username == "matt.maudlin@gooddata.com"}.ID
         project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         notification_to = {
-            :to => 'matt.maudlin@gooddata.com',
+            :to => 'aaron.myhre@gooddata.com',
             :cc => ['emily.rugaber@gooddata.com','sumeet.howe@gooddata.com',"jiri.stovicek@gooddata.com"]
         }
       end
