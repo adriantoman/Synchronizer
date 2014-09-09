@@ -375,8 +375,11 @@ command :update_product do |c|
         # Update budget if there is only one project with specific SFDC_ID
         duplicated_sfdc = projects.find_all{|p| p["DE:Product ID"] != nil and project["DE:Product ID"] != nil and project["DE:Project Type"] == "Implementation" and p["DE:Product ID"].casecmp(project["DE:Product ID"]) == 0 ? true : false}
 
-        if (duplicated_sfdc.count == 1 and sfdc_object[:Total_Service_Hours__c] != nil and project["DE:Project Type"] != "Maintenance") then
-          project[CGI.escape("DE:Budget Hours")] =  sfdc_object[:Total_Service_Hours__c] unless helper.comparerString(project["DE:Budget Hours"],sfdc_object[:Total_Service_Hours__c],"Budget Hours")
+        if (duplicated_sfdc.count == 1 and sfdc_object[:Service_Hours_per_Period__c] != nil and !sfdc_object[:Number_of_Periods__c].nil? and project["DE:Project Type"] != "Maintenance") then
+          #project[CGI.escape("DE:Budget Hours")] =  sfdc_object[:Total_Service_Hours__c] unless helper.comparerString(project["DE:Budget Hours"],sfdc_object[:Total_Service_Hours__c],"Budget Hours")
+          # Per request from M.H. the Budget Hour will be calculated as Number of Periods * Hours Per Period (9.10.2014)
+          budget_hours = Float(sfdc_object[:Service_Hours_per_Period__c]) *  Float(sfdc_object[:Number_of_Periods__c])
+          project[CGI.escape("DE:Budget Hours")] =  budget_hours unless helper.comparerFloat(project["DE:Budget Hours"],budget_hours.to_s,"Budget Hours")
           project.budget =  sfdc_object[:TotalPrice] unless helper.comparerString(project["budget"],sfdc_object[:TotalPrice],"budget")
         end
 
@@ -438,9 +441,13 @@ command :update_product do |c|
         helper.printLog(@log) if helper.changed
         @work_done = true if helper.changed
 
-        if (sfdc_object[:TotalPrice] != nil and Float(sfdc_object[:TotalPrice]) != 0 and sfdc_object[:Total_Service_Hours__c] != nil and  Float(sfdc_object[:Total_Service_Hours__c]) != 0 and project["DE:Project Type"] != "Maintenance") then
+
+        if (sfdc_object[:TotalPrice] != nil and Float(sfdc_object[:TotalPrice]) != 0 and !sfdc_object[:Service_Hours_per_Period__c].nil? and !sfdc_object[:Number_of_Periods__c].nil? and project["DE:Project Type"] != "Maintenance") then
+          hours = Float(sfdc_object[:Service_Hours_per_Period__c]) *  Float(sfdc_object[:Number_of_Periods__c])
+          #hours = Float(sfdc_object[:Total_Service_Hours__c])
+          # Per request from M.H. the Budget Hour will be calculated as Number of Periods * Hours Per Period (9.10.2014)
+          #hours = Integer(sfdc_object[:Service_Hours_per_Period__c]) *  Integer(sfdc_object[:Number_of_Periods__c])
           budget = Float(sfdc_object[:TotalPrice])
-          hours = Float(sfdc_object[:Total_Service_Hours__c])
           rateValue = budget / hours if hours > 0
 
           rates = attask.rate.search({},{:projectID => project.ID})
@@ -762,7 +769,6 @@ command :add do |c|
       project = Attask::Project.new()
       project[CGI.escape("DE:Product ID")] = li[:Id]
       project.name =  li[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + li[:Product][:Name]
-      project[CGI.escape("DE:Budget Hours")] =  li[:Total_Service_Hours__c]
       project[CGI.escape("DE:Total Service Hours")] = li[:Total_Service_Hours__c]
       project.status = "IDA"
 
@@ -806,19 +812,23 @@ command :add do |c|
       project[CGI.escape("DE:Salesforce ID")] = li[:Opportunity][:Id]
 
       #li[:Product][:Name] == 'PS-INVESTMENT'
-
-      if (Float(li[:TotalPrice]) > 0)
-        project[CGI.escape("DE:Project Type")] = "Implementation"
-      elsif (Float(li[:TotalPrice]) == 0 and Float(li[:Approved_Investment_Hours__c]) == Float(li[:Total_Service_Hours__c]))
+      # Requested by M.H od 9.9.2014
+      if (Float(li[:Approved_Investment_Hours__c]) == Float(li[:Total_Service_Hours__c]))
         project[CGI.escape("DE:Project Type")] = "Investment"
+        project[CGI.escape("DE:Budget Hours")] =  0
+      elsif (Float(li[:TotalPrice]) > 0)
+        project[CGI.escape("DE:Project Type")] = "Implementation"
+        budget_hours = Float(li[:Service_Hours_per_Period__c]) *  Float(li[:Number_of_Periods__c])
+        project[CGI.escape("DE:Budget Hours")] =  budget_hours
       elsif (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST')
         project[CGI.escape("DE:Project Type")] = "Customer Success"
+        budget_hours = Float(li[:Service_Hours_per_Period__c]) *  Float(li[:Number_of_Periods__c])
+        project[CGI.escape("DE:Budget Hours")] =  budget_hours
       end
 
       project[CGI.escape("DE:Hours per Period")] = li[:Service_Hours_per_Period__c]
       project[CGI.escape("DE:Number of Periods")] = li[:Number_of_Periods__c]
       project[CGI.escape("DE:Expiration Period")] = li[:Expiration_Period__c]
-
       project[CGI.escape("DE:Salesforce Type")] = li[:Opportunity][:Type]
 
       @log.info "Creating project #{project.name} with SFDC ID #{li[:Id]}"
