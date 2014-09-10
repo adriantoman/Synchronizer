@@ -783,7 +783,7 @@ command :add do |c|
         #project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
         project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         notification_to[:to] = 'martin.hapl@gooddata.com'
-        notification_to[:cc] = ['karel.novak@gooddata.com','michal.hauzirek@gooddata.com','jan.cisar@gooddata.com',"jiri.stovicek@gooddata.com"]
+        notification_to[:cc] = ['karel.novak@gooddata.com','michal.hauzirek@gooddata.com','jan.cisar@gooddata.com',"jiri.stovicek@gooddata.com","tom.kolich@gooddata.com"]
         project["groupID"] = "51dece1700022dc5b57063720458e8d2"
       elsif (li[:Opportunity][:Type] == "Direct")
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
@@ -791,7 +791,7 @@ command :add do |c|
         project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         notification_to = {
             :to => 'aaron.myhre@gooddata.com',
-            :cc => ['emily.rugaber@gooddata.com','sumeet.howe@gooddata.com',"jiri.stovicek@gooddata.com"]
+            :cc => ['emily.rugaber@gooddata.com','sumeet.howe@gooddata.com',"jiri.stovicek@gooddata.com","tom.kolich@gooddata.com"]
         }
       end
 
@@ -1512,7 +1512,7 @@ end
 
 post do |global,command,options,args|
   #@log.close
-  Pony.mail(:to => "martin.hapl@gooddata.com",:cc => "adrian.toman@gooddata.com,miloslav.zientek@gooddata.com",:from => 'attask@gooddata.com', :subject => "Attask Synchronization - Some work was done in #{command.name}", :body => "File in attachements", :attachments => {"migration_#{command.name}.log" => File.read("log/migration_#{command.name}.log")}) if (@work_done)
+  Pony.mail(:to => "martin.hapl@gooddata.com",:cc => "adrian.toman@gooddata.com,jiri.stovicek@gooddata.com",:from => 'attask@gooddata.com', :subject => "Attask Synchronization - Some work was done in #{command.name}", :body => "File in attachements", :attachments => {"migration_#{command.name}.log" => File.read("log/migration_#{command.name}.log")}) if (@work_done)
   # Post logic here
   # Use skips_post before a command to skip this       id
   # block on that command only
