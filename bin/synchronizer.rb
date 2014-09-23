@@ -21,6 +21,7 @@ require "lib/synchronizer.rb"
 require "lib/helper.rb"
 require "lib/google_downloader.rb"
 require "lib/s3_loader.rb"
+#require "databasedotcom"
 include GLI
 
 program_desc 'Program for synchronizing task'
@@ -712,7 +713,7 @@ command :add do |c|
 
 
     opportunityLineItem = Synchronizer::SalesForce.new(sf_username,sf_password)
-    opportunityLineItem.query("SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId,Approved_Investment_Hours__c FROM OpportunityLineItem",{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId,:Approved_Investment_Hours__c],:as_hash => true})
+    opportunityLineItem.query("SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId,Approved_Investment_Hours__c,Service_Type__c FROM OpportunityLineItem",{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId,:Approved_Investment_Hours__c,:Service_Type__c],:as_hash => true})
     opportunityLineItem_data = opportunityLineItem.output
 
     salesforce.filter("6 - CLOSED WON")
@@ -780,15 +781,33 @@ command :add do |c|
         notification_to = {:to => "tom.kolich@gooddata.com"}
         notification_to[:cc] = ["jiri.stovicek@gooddata.com"]
       elsif (li[:Opportunity][:Type] == "Powered by")
-        #project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
-        project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
+        if (li[:Service_Type__c] == "PS")
+          project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
+          project["programID"] = "52e01c390038a885fa659dea5d3b2e3b"
+        elsif (li[:Service_Type__c] == "PSOR")
+          project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
+          project["programID"] = "5420533b006eb9feac3c40df0f8b0178"
+        elsif (li[:Service_Type__c] == "EOR" or li[:Service_Type__c] == "CSM")
+          project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+          project["programID"] = "542124640019e2476c1e1c49dc2b315f"
+        end
+
         notification_to[:to] = 'martin.hapl@gooddata.com'
         notification_to[:cc] = ['karel.novak@gooddata.com','michal.hauzirek@gooddata.com','jan.cisar@gooddata.com',"jiri.stovicek@gooddata.com","tom.kolich@gooddata.com"]
         project["groupID"] = "51dece1700022dc5b57063720458e8d2"
       elsif (li[:Opportunity][:Type] == "Direct")
+        if (li[:Service_Type__c] == "PS")
+          project.ownerID = users.find{|u| u.username == "emily.rugaber@gooddata.com"}.ID
+          project["programID"] = "542052f6006eb1df6f2aa25578bf00de"
+        elsif
+          project.ownerID = users.find{|u| u.username == "emily.rugaber@gooddata.com"}.ID
+          project["programID"] = "542124960019e2cb8e42fcb1e9bd0796"
+        elsif (li[:Service_Type__c] == "EOR" or li[:Service_Type__c] == "CSM")
+          project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+          project["programID"] = "542128040019fa3458191adec117b86c"
+        end
+
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
-        #project.ownerID = users.find{|u| u.username == "matt.maudlin@gooddata.com"}.ID
-        project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         notification_to = {
             :to => 'aaron.myhre@gooddata.com',
             :cc => ['emily.rugaber@gooddata.com','sumeet.howe@gooddata.com',"jiri.stovicek@gooddata.com","tom.kolich@gooddata.com"]
@@ -797,12 +816,6 @@ command :add do |c|
 
       project["companyID"] =  company.ID
       project["categoryID"] = "50f5a7ee000d0278de51cc3a4d803e62"
-
-      #if (li[:Product][:Name] == 'GD-ENT-EOR')
-      #  project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
-      #else
-      #  project["groupID"] = "50f49e85000893b820341d23978dd05b"
-      #end
 
       project["scheduleID"] = "50f558520003e0c8c8d1290e0d051571"
       project["milestonePathID"] = "50f5e5be001a53c6b9027b25d7b00854"
@@ -1428,6 +1441,68 @@ command :update_planed_date do |c|
 
   end
 end
+
+
+
+
+desc 'Attask to SF synchronization'
+
+command :attask_to_salesforce do |c|
+  c.desc 'Username to SF account'
+  c.flag [:sf_username]
+
+  c.desc 'Password + token to SF account'
+  c.flag [:sf_password]
+
+  c.desc 'Username to Attask'
+
+  c.flag [:at_username]
+
+  c.desc 'Password to Attask'
+  c.flag [:at_password]
+
+
+  c.action do |global_options,options,args|
+    sf_username = options[:sf_username]
+    sf_password = options[:sf_password]
+    at_username = options[:at_username]
+    at_password = options[:at_password]
+
+    attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
+    salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
+
+    opportunity = [
+        :Project_Owner__c, "BLEH BLEH"
+    ]
+
+
+    salesforce.rforce_binding.update :ID => "0068000000gubcKAAQ", :sObject => opportunity
+
+    #client = Databasedotcom::Client.new
+    #client.authenticate :username => sf_username, :password => sf_password
+    #
+    #opportunity = client.materialize("Contact")
+    #test = Contanct.all
+    #pp test
+
+
+
+
+
+
+    #salesforce.query("SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId,Celigo_Trigger_Amount__c FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId,:Celigo_Trigger_Amount],:as_hash => true})
+
+
+
+
+
+  end
+
+
+
+
+end
+
 
 
 desc 'Add new projects to SF'
