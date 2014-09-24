@@ -268,18 +268,20 @@ command :update_product do |c|
     at_password = options[:at_password]
 
 
-    @mapping = {
-        "Intern" => "50f73f80002b9038434b0b21c00abb01",
-        "Solution Architect" => "50eaa2290009eeba6d208a473efbb83d",
-        "Practice Manager" => "50eaa298000a530cb7ba2ce1bf82bab1",
-        "Consultant" => "50ad5628000469c57167f54cb5289999",
-        "Architect" => "50eaa26e0009eed64d1aa82aa78b82ac",
-        "Director" => "50eaa2380009eec4c88cd0b565099749",
-        "SE Team Lead" => "50eaa20c0009ee98166e57ccc6c187b5",
-        "Solution Engineer" => "50eaa1f60009ee8d8f23380a8a050c9b",
-        "Contractor" => "50f02f810002afbea77b8672f462c330",
-        "Customer Success Manager" => "50f54dfe00033ea4189871c0c749bc49"
-    }
+    #@mapping = {
+    #    "Intern" => "50f73f80002b9038434b0b21c00abb01",
+    #    "Solution Architect" => "50eaa2290009eeba6d208a473efbb83d",
+    #    "Practice Manager" => "50eaa298000a530cb7ba2ce1bf82bab1",
+    #    "Consultant" => "50ad5628000469c57167f54cb5289999",
+    #    "Architect" => "50eaa26e0009eed64d1aa82aa78b82ac",
+    #    "Director" => "50eaa2380009eec4c88cd0b565099749",
+    #    "SE Team Lead" => "50eaa20c0009ee98166e57ccc6c187b5",
+    #    "Solution Engineer" => "50eaa1f60009ee8d8f23380a8a050c9b",
+    #    "Contractor" => "50f02f810002afbea77b8672f462c330",
+    #    "Customer Success Manager" => "50f54dfe00033ea4189871c0c749bc49"
+    #}
+
+
 
     attask = Attask.client("gooddata",at_username,at_password)
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
@@ -287,7 +289,7 @@ command :update_product do |c|
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
     projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours,DE:MRR,DE:Investment Hours,DE:Investment Reason"})
 
-    #fail "kokos"
+    @mapping = attask.role.search({:fields => "ID,name"}).map{|r| {r["name"] => r["ID"]}}
 
 
     salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
@@ -454,9 +456,9 @@ command :update_product do |c|
           rates = attask.rate.search({},{:projectID => project.ID})
           recalculate = false
 
-          @mapping.each_pair do |k,v|
+          @mapping.each do |v|
             #Check if rate is in system
-            rate = rates.find{|r| r.roleID == v}
+            rate = rates.find{|r| r.roleID == v.values.first}
             if (rate != nil)
               oldValue = Float(rate.rateValue)
               oldValue = oldValue.round(2)
@@ -472,10 +474,10 @@ command :update_product do |c|
             else
               rate = Attask::Rate.new()
               rate["projectID"] = project.ID
-              rate["roleID"] = v
+              rate["roleID"] = v.values.first
               rate["rateValue"] = rateValue.round(2)
               helper.getProjectInfo(@log) if recalculate == false
-              @log.info "We are adding rate #{rateValue.round(2)} (#{v}) for project #{project["ID"]}"
+              @log.info "We are adding rate #{rateValue.round(2)} (#{v.values.first}) for project #{project["ID"]}"
               attask.rate.add(rate)
               recalculate = true
             end
