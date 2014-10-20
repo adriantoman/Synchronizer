@@ -1,4 +1,3 @@
-require "google_drive"
 
 
 module Synchronizer

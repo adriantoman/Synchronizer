@@ -30,7 +30,6 @@ Gem::Specification.new do |s|
   s.add_dependency "rforce","=0.11"
   s.add_dependency "chronic"
   s.add_dependency "fastercsv"
-  s.add_dependency "google_drive"
   s.add_dependency "aws-s3"
   s.add_dependency "activesupport","3.2.16"
   s.add_dependency 'databasedotcom',"1.0.7"
