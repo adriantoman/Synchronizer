@@ -21,6 +21,7 @@ require "lib/synchronizer.rb"
 require "lib/helper.rb"
 require "lib/google_downloader.rb"
 require "lib/s3_loader.rb"
+require 'date'
 #require "databasedotcom"
 include GLI
 
@@ -849,7 +850,6 @@ command :add do |c|
       @log.info "Creating project #{project.name} with SFDC ID #{li[:Id]}"
 
       project = attask.project.add(project)[0]
-
       Pony.mail(:to => notification_to[:to],:cc => notification_to[:cc],:from => 'attask@gooddata.com', :subject => "New project with #{project.name} was create in attask.", :body => "Project link: https://gooddata.attask-ondemand.com/project/view?ID=#{project.ID}")
       @work_done = true
       count = count + 1
@@ -1345,13 +1345,6 @@ end
 
 desc 'Add new projects to SF'
 command :update_planed_date do |c|
-
-  c.desc 'Username to SF account'
-  c.flag [:sf_username]
-
-  c.desc 'Password + token to SF account'
-  c.flag [:sf_password]
-
   c.desc 'Username to Attask'
 
   c.flag [:at_username]
@@ -1361,86 +1354,23 @@ command :update_planed_date do |c|
 
 
   c.action do |global_options,options,args|
-    puts "KOkos"
 
-    sf_username = options[:sf_username]
-    sf_password = options[:sf_password]
     at_username = options[:at_username]
     at_password = options[:at_password]
 
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
     attask = Attask.client("gooddata",at_username,at_password)
 
-    projects = attask.project.search({:fields => "ID,name,DE:Project Type,DE:Legacy ID,DE:Legacy,status",:customFields => ""})
-    tasks = attask.task.search({:fields => "ID,name,projectID",:customFields => ""})
-
-    start_only = FasterCSV.read("/home/adrian.toman/import/ActualStartDate_only.csv",{:headers=>true})
-    completed = FasterCSV.read("/home/adrian.toman/import/Completed_Project_ ActualStartDate_CompletionDate.csv",{:headers=>true})
-
-    projects = projects.find_all{|p|  p["DE:Legacy"] == "Yes" and p["DE:Project Type"] == "Implementation"}
-
+    projects = attask.project.search({:fields => "ID,name,ownerID",:customFields => ""})
     projects.each do |project|
-         task = tasks.find {|t| t["projectID"] == project["ID"] and (t["name"] == "Completition of Legacy project" or t["name"] == "Completition of Legacy project - Jira") }
-
-        start_date = start_only.find {|c| c["Project"] == project["ID"]}
-         if (start_date.nil?)
-          start_date = completed.find {|c| c["Project"] == project["ID"]}
-        end
-
-        start_date = start_date.nil? ? nil : DateTime.strptime(start_date["Actualstartdate"],"%m/%d/%Y")
-
-        completed_date = completed.find {|c| c["Project"] == project["ID"]}
-        completed_date = completed_date.nil? ? nil : DateTime.strptime(completed_date["Actualcompletiondate"],"%m/%d/%Y")
-
-       if (!start_date.nil?)
-
-          puts "Working with: #{project["ID"]}"
-
-          #project["plannedStartDate"] = start_date
-          #project["actualStartDate"] = start_date
-          project.delete("DE:Salesforce ID")
-          project.delete("DE:Project Type")
-          project.delete("DE:Legacy ID")
-          project.delete("DE:Legacy")
-          #attask.project.update(project)
-          #puts "The project #{project["ID"]} has been updated (Start Date) #{start_date}"
-
-          completed_test = project["status"] == "CPL"
-
-          project["status"] = "CUR" if completed_test
-          attask.project.update(project) if completed_test
-
-          if (task.nil?)
-            task = Attask::Task.new()
-            task["projectID"] = project["ID"]
-            task["name"] = "Completition of Legacy project - Jira"
-            task["description"] = "Added to edit completition date in attask"
-            task["actualStartDate"] = start_date
-            task["actualCompletionDate"] = completed_date || start_date
-            task["status"] = "CPL"
-            puts "The project start date is #{completed_date || start_date}"
-            puts "The project completition date is #{completed_date || start_date}"
-            puts "The project set to Current #{project["ID"]}"
-
-            attask.task.add(task)
-          else
-
-            task["actualStartDate"] = start_date
-            task["actualCompletionDate"] = completed_date || start_date
-            task["status"] = "CPL"
-            attask.task.update(task)
-            puts "The task start date was changed to #{start_date}"
-            puts "The task completition date was changed to #{completed_date || start_date}"
-            puts "The project set to Current #{project["ID"]}"
-
-          end
-
-          project["status"] = "CPL" if completed_test
-          attask.project.update(project) if completed_test
-
-        end
+        pp project.ownerID
+        pp project.ID
+         if (project.ownerID.nil?)
+           puts "Updatuju #{project.ID}"
+           project["ownerID"] = "50e6f9f4001bcc70028ae8a52ae94033"
+           attask.project.update(project)
+         end
     end
-
   end
 end
 
@@ -1451,11 +1381,7 @@ desc 'Attask to SF synchronization'
 
 command :attask_to_salesforce do |c|
   c.desc 'Username to SF account'
-  c.flag [:sf_username]
-
-  c.desc 'Password + token to SF account'
-  c.flag [:sf_password]
-
+  c.flag [:sf_config_file]
   c.desc 'Username to Attask'
 
   c.flag [:at_username]
@@ -1465,102 +1391,106 @@ command :attask_to_salesforce do |c|
 
 
   c.action do |global_options,options,args|
-    sf_username = options[:sf_username]
-    sf_password = options[:sf_password]
+    require "databasedotcom"
+
+    sf_config_file = options[:sf_config_file]
     at_username = options[:at_username]
     at_password = options[:at_password]
 
-    attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
+    yaml = YAML.load_file(sf_config_file)
+
+    sf_username = yaml["username"]
+    sf_password = yaml["password"] + yaml["token"]
+
+    #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
+    attask = Attask.client("gooddata",at_username,at_password)
+    projects = attask.project.search({:fields => "ID,group:name,owner:name,name,status,percentComplete",:customFields => "DE:Salesforce ID,DE:Status Update Overview,DE:Action Plan,DE:External Org Dependencies,DE:Condition Indicator,DE:Budget Hours"})
+
+
     salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
+    salesforce.query("SELECT Id,Project_Owner__c,Project_Group__c,Project_Stage__c,Status_Update__c,Services_Complete__c,Implementation_Status__c,Action_Plan__c,External_Org_Dependencies__c,AccountId,Name FROM Opportunity",{:values => [:Id,:Project_Owner__c,:Project_Group__c,:Project_Stage__c,:Status_Update__c,:Services_Complete__c,:Implementation_Status__c,:Action_Plan__c,:External_Org_Dependencies__c,:AccountId,:Name],:as_hash => true})
+    opportunities = salesforce.output
 
-    opportunity = [
-        :Project_Owner__c, "BLEH BLEH"
-    ]
+    account = Synchronizer::SalesForce.new(sf_username,sf_password)
+    account.query("SELECT Id, Name, OwnerId FROM Account",{:values => [:Id,:Name,:OwnerId],:as_hash => true})
+    accounts = account.output
 
+    user = Synchronizer::SalesForce.new(sf_username,sf_password)
+    user.query("SELECT Id, Email,Name FROM User",{:values => [:Id,:Email,:Name],:as_hash => true})
+    users = user.output
 
-    salesforce.rforce_binding.update :ID => "0068000000gubcKAAQ", :sObject => opportunity
+    client = Databasedotcom::Client.new(sf_config_file)
+    client.authenticate :username => sf_username, :password => sf_password
+    client.materialize("Opportunity")
 
-    #client = Databasedotcom::Client.new
-    #client.authenticate :username => sf_username, :password => sf_password
-    #
-    #opportunity = client.materialize("Contact")
-    #test = Contanct.all
-    #pp test
-
-
-
-
-
-
-    #salesforce.query("SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId,Celigo_Trigger_Amount__c FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId,:Celigo_Trigger_Amount],:as_hash => true})
-
-
-
-
-
-  end
-
-
-
-
-end
-
-
-
-desc 'Add new projects to SF'
-command :update_old_projects do |c|
-
-  c.desc 'Username to SF account'
-  c.flag [:sf_username]
-
-  c.desc 'Password + token to SF account'
-  c.flag [:sf_password]
-
-  c.desc 'Username to Attask'
-
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
-
-  c.action do |global_options,options,args|
-
-
-    sf_username = options[:sf_username]
-    sf_password = options[:sf_password]
-    at_username = options[:at_username]
-    at_password = options[:at_password]
-
-    attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
-    #attask = Attask.client("gooddata",at_username,at_password)
-
-    projects = attask.project.search({:fields => "ID,name",:customFields => "DE:Total Service Hours"})
-
-    hours = FasterCSV.read("/home/adrian.toman/import/hours.csv",{:headers=>true})
-
-    projects.each do |project|
-      hour = hours.find {|h| h["projectid"] == project.ID}
-
-      if (!hour.nil?)
-        project["DE:Legacy Budget Hours"]
-
-
-
-
-      end
-
-
-
+    status_values = {}
+    attask.project.metadata["data"]["fields"]["status"]["possibleValues"].each do |s|
+      status_values[s["value"]] = s["label"]
     end
 
+    opportunities.each do |op_value|
+      projects_with_given_opportunity = projects.find_all{|p| p["DE:Salesforce ID"] == op_value[:Id]}
+      project = nil
+      #There can be multiple projects with given opportunity. If there are more then one we will take the open one and with biggest bugget
+      if (projects_with_given_opportunity.count == 1)
+        project = projects_with_given_opportunity.first
+      elsif (projects_with_given_opportunity.count > 1)
+        project = nil
+        projects_with_given_opportunity = projects_with_given_opportunity.find_all{|p| p.status != "CPL" and p.status != "DED"}
+        budget_hours = 0
+        projects_with_given_opportunity.each do |p|
+          if !p["DE:Budget Hours"].nil? and budget_hours < p["DE:Budget Hours"]
+            budget_hours = p["DE:Budget Hours"]
+            project = p
+          end
+        end
+      end
+
+      now = Date.today
+
+      if (!project.nil?)
+        helper = Synchronizer::Helper.new(op_value[:Id],op_value[:Name],"Opportunity")
+
+        # if ((op_value[:Project_Stage__c] == "New" or op_value[:Project_Stage__c].nil?) and (project.status == "PLN" or project.status == "CUR" ))
+        #   # Per https://confluence.intgdc.com/pages/viewpage.action?pageId=145326495 we need to send email to Account Owner
+        #   value = accounts.find{|a| a[:Id] == op_value[:AccountId]}
+        #   user = users.find{|u| u[:Id] == value[:OwnerId]}
+        #   if (!user.nil?)
+        #     text = "Dear #{user[:Name]},\n\nServices completed staffing of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\nPlease contact the owner directly for kickoff planning.\n\nBest regards,\nServices Staffing Team"
+        #     #Pony.mail(:to => user[:Email],:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
+        #     Pony.mail(:to => user[:Email],:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
+        #     fail "kokos"
+        #   end
+        # end
+
+
+
+        values = {}
+        values["Project_Owner__c"] = project.owner.name unless helper.comparerString(op_value[:Project_Owner__c],project.owner.name,"Owner")
+        values["Project_Group__c"] = project.group.name unless helper.comparerString(op_value[:Project_Group__c],project.group.name,"Group")
+        values["Project_Stage__c"] = status_values[project.status] unless helper.comparerString(op_value[:Project_Stage__c],status_values[project.status],"Status")
+
+        sf_status_update = op_value[:Status_Update__c].nil? ? "" : op_value[:Status_Update__c].gsub(/[^[:print:]]/,"")
+        at_status_update = project["DE:Status Update Overview"].nil? ? "" : project["DE:Status Update Overview"].gsub(/[^[:print:]]/,"")
+        values["Status_Update__c"] = project["DE:Status Update Overview"].nil? ? "" : project["DE:Status Update Overview"] unless helper.comparerString(sf_status_update,at_status_update,"Status Update")
+
+        if (now.wday == 1)
+          values["Services_Complete__c"] = project["percentComplete"] unless helper.comparerString(op_value[:Services_Complete__c],project["percentComplete"],"Services Complete")
+        end
+        values["Implementation_Status__c"] = project["DE:Condition Indicator"] unless helper.comparerString(op_value[:Implementation_Status__c],project["DE:Condition Indicator"],"Implementation Status")
+        values["Action_Plan__c"] = project["DE:Action Plan"] unless helper.comparerString(op_value[:Action_Plan__c],project["DE:Action Plan"],"Action Plan")
+        values["External_Org_Dependencies__c"] = project["DE:External Org Dependencies"] unless helper.comparerString(op_value[:External_Org_Dependencies__c],project["DE:External Org Dependencies"],"Action Plan")
+        begin
+          client.update("Opportunity",op_value[:Id],values) if helper.changed
+          helper.printLog(@log) if helper.changed
+          @work_done = true if helper.changed
+        rescue => e
+          @log.error "There was error when updating opportunity #{op_value[:Id]}. Message: #{e.message}"
+        end
+      end
+    end
   end
 end
-
-
-
-
-
 
 
 

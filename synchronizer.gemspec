@@ -19,11 +19,11 @@ Gem::Specification.new do |s|
 
   # specify any dependencies here; for example:
   s.add_dependency "builder","~> 3.0.0"
-  s.add_dependency "httparty"
+  s.add_dependency "httparty","0.11"
   s.add_dependency "hashie"
   s.add_dependency "json"
   s.add_dependency "ext"
-  s.add_dependency "gli"
+  s.add_dependency "gli","1.6.0"
   s.add_dependency "attask"
   s.add_dependency "logger"
   s.add_dependency "pony"
@@ -32,6 +32,10 @@ Gem::Specification.new do |s|
   s.add_dependency "fastercsv"
   s.add_dependency "google_drive"
   s.add_dependency "aws-s3"
+  s.add_dependency "activesupport","3.2.16"
+  s.add_dependency 'databasedotcom',"1.0.7"
+  s.add_dependency 'mime-types',"1.24"
+  s.add_dependency 'nokogiri',"1.5.5"
 
 
 end
