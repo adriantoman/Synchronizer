@@ -1382,6 +1382,7 @@ desc 'Attask to SF synchronization'
 command :attask_to_salesforce do |c|
   c.desc 'Username to SF account'
   c.flag [:sf_config_file]
+
   c.desc 'Username to Attask'
 
   c.action do |global_options,options,args|
@@ -1391,8 +1392,8 @@ command :attask_to_salesforce do |c|
 
     yaml = YAML.load_file(sf_config_file)
 
-    at_username = options["attask_login"]
-    at_password = options["attask_password"]
+    at_username = yaml["attask_login"]
+    at_password = yaml["attask_password"]
     sf_username = yaml["username"]
     sf_password = yaml["password"] + yaml["token"]
 
@@ -1417,10 +1418,19 @@ command :attask_to_salesforce do |c|
     client.authenticate :username => sf_username, :password => sf_password
     client.materialize("Opportunity")
 
-    status_values = {}
-    attask.project.metadata["data"]["fields"]["status"]["possibleValues"].each do |s|
-      status_values[s["value"]] = s["label"]
-    end
+    status_values ={
+        "DED" => "Dead",
+        "IDA" => "New",
+        "MNT" => "Maintenance",
+        "PLN" => "Planning",
+        "CPL" => "Complete",
+        "CUR" => "Current",
+        "ONH" => "On Hold",
+        "REQ" => "Requested",
+        "APR" => "Approved",
+        "ASO" => "Awaiting Sign-off",
+        "REJ" => "Rejected"
+    }
 
     opportunities.each do |op_value|
       projects_with_given_opportunity = projects.find_all{|p| p["DE:Salesforce ID"] == op_value[:Id]}
@@ -1444,18 +1454,16 @@ command :attask_to_salesforce do |c|
 
       if (!project.nil?)
         helper = Synchronizer::Helper.new(op_value[:Id],op_value[:Name],"Opportunity")
-
-        # if ((op_value[:Project_Stage__c] == "New" or op_value[:Project_Stage__c].nil?) and (project.status == "PLN" or project.status == "CUR" ))
-        #   # Per https://confluence.intgdc.com/pages/viewpage.action?pageId=145326495 we need to send email to Account Owner
-        #   value = accounts.find{|a| a[:Id] == op_value[:AccountId]}
-        #   user = users.find{|u| u[:Id] == value[:OwnerId]}
-        #   if (!user.nil?)
-        #     text = "Dear #{user[:Name]},\n\nServices completed staffing of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\nPlease contact the owner directly for kickoff planning.\n\nBest regards,\nServices Staffing Team"
-        #     #Pony.mail(:to => user[:Email],:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
-        #     Pony.mail(:to => user[:Email],:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
-        #     fail "kokos"
-        #   end
-        # end
+        if ((op_value[:Project_Stage__c] == "New" or op_value[:Project_Stage__c].nil?) and (project.status == "PLN" or project.status == "CUR" ))
+          # Per https://confluence.intgdc.com/pages/viewpage.action?pageId=145326495 we need to send email to Account Owner
+          value = accounts.find{|a| a[:Id] == op_value[:AccountId]}
+          user = users.find{|u| u[:Id] == value[:OwnerId]}
+          if (!user.nil?)
+            text = "Dear #{user[:Name]},\n\nServices completed staffing of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\nPlease contact the owner directly for kickoff planning.\n\nBest regards,\nServices Staffing Team"
+            #Pony.mail(:to => "jiri.stovicek@gooddata.com",:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
+            Pony.mail(:to => user[:Email],:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
+          end
+        end
 
 
 
