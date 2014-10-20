@@ -1384,21 +1384,15 @@ command :attask_to_salesforce do |c|
   c.flag [:sf_config_file]
   c.desc 'Username to Attask'
 
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
-
   c.action do |global_options,options,args|
     require "databasedotcom"
 
     sf_config_file = options[:sf_config_file]
-    at_username = options[:at_username]
-    at_password = options[:at_password]
 
     yaml = YAML.load_file(sf_config_file)
 
+    at_username = options["attask_login"]
+    at_password = options["attask_password"]
     sf_username = yaml["username"]
     sf_password = yaml["password"] + yaml["token"]
 
