@@ -1452,6 +1452,10 @@ command :attask_to_salesforce do |c|
 
       now = Date.today
 
+      send_mail = false
+      text = ""
+      error_text = ""
+      user_mail = ""
       if (!project.nil?)
         helper = Synchronizer::Helper.new(op_value[:Id],op_value[:Name],"Opportunity")
         if ((op_value[:Project_Stage__c] == "New" or op_value[:Project_Stage__c].nil?) and (project.status == "PLN" or project.status == "CUR" ))
@@ -1460,13 +1464,12 @@ command :attask_to_salesforce do |c|
           user = users.find{|u| u[:Id] == value[:OwnerId]}
           if (!user.nil?)
             text = "Dear #{user[:Name]},\n\nServices completed staffing of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\nPlease contact the owner directly for kickoff planning.\n\nBest regards,\nServices Staffing Team"
+            error_text = "There is problemw ith synchronization of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\n"
             #Pony.mail(:to => "jiri.stovicek@gooddata.com",:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
-            Pony.mail(:to => user[:Email],:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
+            user_mail = user[:Email]
+            send_mail = true
           end
         end
-
-
-
         values = {}
         values["Project_Owner__c"] = project.owner.name unless helper.comparerString(op_value[:Project_Owner__c],project.owner.name,"Owner")
         values["Project_Group__c"] = project.group.name unless helper.comparerString(op_value[:Project_Group__c],project.group.name,"Group")
@@ -1486,8 +1489,14 @@ command :attask_to_salesforce do |c|
           client.update("Opportunity",op_value[:Id],values) if helper.changed
           helper.printLog(@log) if helper.changed
           @work_done = true if helper.changed
+          if (send_mail)
+            Pony.mail(:to => user_mail,:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
+          end
         rescue => e
           @log.error "There was error when updating opportunity #{op_value[:Id]}. Message: #{e.message}"
+          if (send_mail)
+            Pony.mail(:to => "adrian.toman@gooddata.com,martin.hapl@gooddata.com,jiri.stovicek@gooddata.com",:from => 'attask@gooddata.com', :subject => "Error - Attask => Salesforce Synchronization", :body => error_text + "\n Error message is #{e.message}")
+          end
         end
       end
     end
