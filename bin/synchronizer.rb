@@ -1464,7 +1464,7 @@ command :attask_to_salesforce do |c|
           user = users.find{|u| u[:Id] == value[:OwnerId]}
           if (!user.nil?)
             text = "Dear #{user[:Name]},\n\nServices completed staffing of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\nPlease contact the owner directly for kickoff planning.\n\nBest regards,\nServices Staffing Team"
-            error_text = "There is problemw ith synchronization of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\n"
+            error_text = "There is problem ith synchronization of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\n"
             #Pony.mail(:to => "jiri.stovicek@gooddata.com",:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
             user_mail = user[:Email]
             send_mail = true
