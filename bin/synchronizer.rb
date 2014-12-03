@@ -796,7 +796,7 @@ command :add do |c|
         end
 
         notification_to[:to] = 'martin.hapl@gooddata.com'
-        notification_to[:cc] = ['karel.novak@gooddata.com','michal.hauzirek@gooddata.com','jan.cisar@gooddata.com',"jiri.stovicek@gooddata.com","tom.kolich@gooddata.com"]
+        notification_to[:cc] = ['karel.novak@gooddata.com','michal.hauzirek@gooddata.com','jan.cisar@gooddata.com',"jiri.stovicek@gooddata.com","tom.kolich@gooddata.com","zd@gooddata.com"]
         project["groupID"] = "51dece1700022dc5b57063720458e8d2"
       elsif (li[:Opportunity][:Type] == "Direct")
         if (li[:Service_Type__c] == "PS")
@@ -813,7 +813,7 @@ command :add do |c|
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
         notification_to = {
             :to => 'aaron.myhre@gooddata.com',
-            :cc => ['emily.rugaber@gooddata.com','sumeet.howe@gooddata.com',"jiri.stovicek@gooddata.com","tom.kolich@gooddata.com"]
+            :cc => ['emily.rugaber@gooddata.com','sumeet.howe@gooddata.com',"jiri.stovicek@gooddata.com","tom.kolich@gooddata.com","zd@gooddata.com"]
         }
       end
 
