@@ -27,30 +27,38 @@ include GLI
 
 program_desc 'Program for synchronizing task'
 
+config_file 'synchronizer.conf'
+
+desc 'Username to Attask'
+flag [:at_username]
+
+desc 'Password to Attask'
+flag [:at_password]
+
+desc 'Username to SF account'
+flag [:sf_username]
+
+desc 'Password + token to SF account'
+flag [:sf_password]
+
+desc 'S3 access key'
+flag [:s3_access]
+
+desc'S3 secret key'
+flag [:s3_secret]
+
 
 desc 'Tests'
 command :test do |c|
 #  c.desc 'Execute only for one entity.'
 #  c.default_value false
 #  c.flag [:o, :only]
-  c.desc 'Username to Attask'
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
-  c.desc 'S3 access key'
-  c.flag [:s3_access]
-
-  s.desc 'S3 secret key'
-  c.flag [:s3_secret]
-
 
   c.action do |global_options,options,args|
-    at_username = options[:at_username]
-    at_password = options[:at_password]
-    s3_access = options[:s3_access]
-    s3_secret = options[:s3_secret]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
+    s3_access = global_options[:s3_access]
+    s3_secret = global_options[:s3_secret]
 
 
     attask = Attask.client("gooddata",at_username,at_password)
@@ -88,25 +96,12 @@ command :update do |c|
 #  c.default_value false
 #  c.flag [:o, :only]
 
-  c.desc 'Username to SF account'
-  c.flag [:sf_username]
-
-  c.desc 'Password + token to SF account'
-  c.flag [:sf_password]
-
-  c.desc 'Username to Attask'
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
-
   c.action do |global_options,options,args|
 
-    sf_username = options[:sf_username]
-    sf_password = options[:sf_password]
-    at_username = options[:at_username]
-    at_password = options[:at_password]
+    sf_username = global_options[:sf_username]
+    sf_password = global_options[:sf_password]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
 
 
     @mapping = {
@@ -248,25 +243,12 @@ command :update_product do |c|
 #  c.default_value false
 #  c.flag [:o, :only]
 
-  c.desc 'Username to SF account'
-  c.flag [:sf_username]
-
-  c.desc 'Password + token to SF account'
-  c.flag [:sf_password]
-
-  c.desc 'Username to Attask'
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
-
   c.action do |global_options,options,args|
 
-    sf_username = options[:sf_username]
-    sf_password = options[:sf_password]
-    at_username = options[:at_username]
-    at_password = options[:at_password]
+    sf_username = global_options[:sf_username]
+    sf_password = global_options[:sf_password]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
 
 
     #@mapping = {
@@ -509,19 +491,13 @@ end
 desc 'Generate metadata'
 command :generate_metadata do |c|
 
-  c.desc 'Username to Attask'
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
   c.desc 'Export path'
   c.flag [:export]
 
 
   c.action do |global_options,options,args|
-    at_username = options[:at_username]
-    at_password = options[:at_password]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
     export = options[:export]
 
     attask = Attask.client("gooddata",at_username,at_password)
@@ -564,32 +540,17 @@ end
 desc 'Init ES'
 command :init do |c|
 
-  c.desc 'Username to Attask'
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
   c.desc 'Export path'
   c.flag [:export]
 
-  c.desc 'S3 access key'
-  c.flag [:s3_access]
-
-  s.desc 'S3 secret key'
-  c.flag [:s3_secret]
-
-
-
-
-
   c.action do |global_options,options,args|
 
-    at_username = options[:at_username]
-    at_password = options[:at_password]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
+    s3_access = global_options[:s3_access]
+    s3_secret = global_options[:s3_secret]
+
     export = options[:export]
-    s3_access = options[:s3_access]
-    s3_secret = options[:s3_secret]
 
     attask = Attask.client("gooddata",at_username,at_password)
 
@@ -665,24 +626,11 @@ end
 desc 'Add new projects to SF'
 command :add do |c|
 
-  c.desc 'Username to SF account'
-  c.flag [:sf_username]
-
-  c.desc 'Password + token to SF account'
-  c.flag [:sf_password]
-
-  c.desc 'Username to Attask'
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
-
   c.action do |global_options,options,args|
-    sf_username = options[:sf_username]
-    sf_password = options[:sf_password]
-    at_username = options[:at_username]
-    at_password = options[:at_password]
+    sf_username = global_options[:sf_username]
+    sf_password = global_options[:sf_password]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
 
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
     attask = Attask.client("gooddata",at_username,at_password)
@@ -861,35 +809,19 @@ end
 desc 'Spredsheet'
 command :spredsheet do |c|
 
-
-
-  c.desc 'Username to Attask'
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
   c.desc 'Username to Google'
   c.flag [:gs_username]
 
   c.desc 'Password to Google'
   c.flag [:gs_password]
 
-  c.desc 'Username to Google'
-  c.flag [:sf_username]
-
-  c.desc 'Password to Google'
-  c.flag [:sf_password]
-
-
-
   c.action do |global_options,options,args|
-    at_username = options[:at_username]
-    at_password = options[:at_password]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
+    sf_username = global_options[:sf_username]
+    sf_password = global_options[:sf_password]
     gs_username = options[:gs_username]
     gs_password = options[:gs_password]
-    sf_username = options[:sf_username]
-    sf_password = options[:sf_password]
 
     attask = Attask.client("gooddata",at_username,at_password)
 
@@ -1013,17 +945,10 @@ command :jira do |c|
 #  c.default_value false
 #  c.flag [:o, :only]
 
-  c.desc 'Username to Attask'
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
-
   c.action do |global_options,options,args|
 
-    at_username = options[:at_username]
-    at_password = options[:at_password]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
 
     attask = Attask.client("gooddata",at_username,at_password)
 
@@ -1056,24 +981,11 @@ end
 desc 'Check and fix billable hours'
 command :billable_check do |c|
 
-  c.desc 'Username to SF account'
-  c.flag [:sf_username]
-
-  c.desc 'Password + token to SF account'
-  c.flag [:sf_password]
-
-  c.desc 'Username to Attask'
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
-
   c.action do |global_options,options,args|
-    sf_username = options[:sf_username]
-    sf_password = options[:sf_password]
-    at_username = options[:at_username]
-    at_password = options[:at_password]
+    sf_username = global_options[:sf_username]
+    sf_password = global_options[:sf_password]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
 
     attask = Attask.client("gooddata",at_username,at_password)
 
@@ -1158,25 +1070,11 @@ end
 desc 'Add new projects to SF'
 command :update_ps_hours do |c|
 
-  c.desc 'Username to SF account'
-  c.flag [:sf_username]
-
-  c.desc 'Password + token to SF account'
-  c.flag [:sf_password]
-
-  c.desc 'Username to Attask'
-
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
-
   c.action do |global_options,options,args|
-    sf_username = options[:sf_username]
-    sf_password = options[:sf_password]
-    at_username = options[:at_username]
-    at_password = options[:at_password]
+    sf_username = global_options[:sf_username]
+    sf_password = global_options[:sf_password]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
 
     attask = Attask.client("gooddata",at_username,at_password)
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
@@ -1227,17 +1125,10 @@ end
 desc 'Add new projects to SF'
 command :move do |c|
 
-  c.desc 'Username to Attask'
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
-
   c.action do |global_options,options,args|
 
-    at_username = options[:at_username]
-    at_password = options[:at_password]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
 
     attask = Attask.client("gooddata",at_username,at_password)
 
@@ -1285,26 +1176,12 @@ end
 desc 'Add new projects to SF'
 command :pagerduty do |c|
 
-  c.desc 'Username to Attask'
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
-  c.desc 'S3 access key'
-  c.flag [:s3_access]
-
-  s.desc 'S3 secret key'
-  c.flag [:s3_secret]
-
-
-
   c.action do |global_options,options,args|
 
-    at_username = options[:at_username]
-    at_password = options[:at_password]
-    s3_access = options[:s3_access]
-    s3_secret = options[:s3_secret]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
+    s3_access = global_options[:s3_access]
+    s3_secret = global_options[:s3_secret]
 
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
     attask = Attask.client("gooddata",at_username,at_password)
@@ -1345,18 +1222,11 @@ end
 
 desc 'Add new projects to SF'
 command :update_planed_date do |c|
-  c.desc 'Username to Attask'
-
-  c.flag [:at_username]
-
-  c.desc 'Password to Attask'
-  c.flag [:at_password]
-
 
   c.action do |global_options,options,args|
 
-    at_username = options[:at_username]
-    at_password = options[:at_password]
+    at_username = global_options[:at_username]
+    at_password = global_options[:at_password]
 
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
     attask = Attask.client("gooddata",at_username,at_password)
