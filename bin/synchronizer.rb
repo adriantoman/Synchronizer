@@ -92,17 +92,19 @@ end
 
 desc 'SFDC -> Attask Update'
 command :update do |c|
-#  c.desc 'Execute only for one entity.'
-#  c.default_value false
-#  c.flag [:o, :only]
+  c.desc 'Config file'
+  c.flag [:config_file]
+
 
   c.action do |global_options,options,args|
+    config_file = options[:config_file]
 
-    sf_username = global_options[:sf_username]
-    sf_password = global_options[:sf_password]
-    at_username = global_options[:at_username]
-    at_password = global_options[:at_password]
+    yaml = YAML.load_file(config_file)
 
+    at_username = yaml["attask_login"]
+    at_password = yaml["attask_password"]
+    sf_username = yaml["username"]
+    sf_password = yaml["password"] + yaml["token"]
 
     @mapping = {
         "Intern" => "50f73f80002b9038434b0b21c00abb01",
@@ -239,17 +241,17 @@ command :update do |c|
 
 desc 'SFDC -> Attask Update'
 command :update_product do |c|
-#  c.desc 'Execute only for one entity.'
-#  c.default_value false
-#  c.flag [:o, :only]
+  c.desc 'Config file'
+  c.flag [:config_file]
 
   c.action do |global_options,options,args|
 
-    sf_username = global_options[:sf_username]
-    sf_password = global_options[:sf_password]
-    at_username = global_options[:at_username]
-    at_password = global_options[:at_password]
-
+    config_file = options[:config_file]
+    yaml = YAML.load_file(config_file)
+    at_username = yaml["attask_login"]
+    at_password = yaml["attask_password"]
+    sf_username = yaml["username"]
+    sf_password = yaml["password"] + yaml["token"]
 
     #@mapping = {
     #    "Intern" => "50f73f80002b9038434b0b21c00abb01",
@@ -494,10 +496,16 @@ command :generate_metadata do |c|
   c.desc 'Export path'
   c.flag [:export]
 
+  c.desc 'Config file'
+  c.flag [:config_file]
+
 
   c.action do |global_options,options,args|
-    at_username = global_options[:at_username]
-    at_password = global_options[:at_password]
+    config_file = options[:config_file]
+    yaml = YAML.load_file(config_file)
+    at_username = yaml["attask_login"]
+    at_password = yaml["attask_password"]
+
     export = options[:export]
 
     attask = Attask.client("gooddata",at_username,at_password)
@@ -543,12 +551,16 @@ command :init do |c|
   c.desc 'Export path'
   c.flag [:export]
 
-  c.action do |global_options,options,args|
+  c.desc 'Config file'
+  c.flag [:config_file]
 
-    at_username = global_options[:at_username]
-    at_password = global_options[:at_password]
-    s3_access = global_options[:s3_access]
-    s3_secret = global_options[:s3_secret]
+  c.action do |global_options,options,args|
+    config_file = options[:config_file]
+    yaml = YAML.load_file(config_file)
+    at_username = yaml["attask_login"]
+    at_password = yaml["attask_password"]
+    s3_access = yaml["s3_access"]
+    s3_secret = yaml["s3_secret"]
 
     export = options[:export]
 
@@ -626,11 +638,17 @@ end
 desc 'Add new projects to SF'
 command :add do |c|
 
+  c.desc 'Config file'
+  c.flag [:config_file]
+
+
   c.action do |global_options,options,args|
-    sf_username = global_options[:sf_username]
-    sf_password = global_options[:sf_password]
-    at_username = global_options[:at_username]
-    at_password = global_options[:at_password]
+    config_file = options[:config_file]
+    yaml = YAML.load_file(config_file)
+    at_username = yaml["attask_login"]
+    at_password = yaml["attask_password"]
+    sf_username = yaml["username"]
+    sf_password = yaml["password"] + yaml["token"]
 
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
     attask = Attask.client("gooddata",at_username,at_password)
@@ -1176,12 +1194,19 @@ end
 desc 'Add new projects to SF'
 command :pagerduty do |c|
 
+  c.desc 'Config file'
+  c.flag [:config_file]
+
+
   c.action do |global_options,options,args|
 
-    at_username = global_options[:at_username]
-    at_password = global_options[:at_password]
-    s3_access = global_options[:s3_access]
-    s3_secret = global_options[:s3_secret]
+
+    config_file = options[:config_file]
+    yaml = YAML.load_file(config_file)
+    at_username = yaml["attask_login"]
+    at_password = yaml["attask_password"]
+    s3_access = yaml["s3_access"]
+    s3_secret = yaml["s3_secret"]
 
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
     attask = Attask.client("gooddata",at_username,at_password)
