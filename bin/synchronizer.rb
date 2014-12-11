@@ -367,7 +367,7 @@ command :update_product do |c|
           #project[CGI.escape("DE:Budget Hours")] =  sfdc_object[:Total_Service_Hours__c] unless helper.comparerString(project["DE:Budget Hours"],sfdc_object[:Total_Service_Hours__c],"Budget Hours")
           # Per request from M.H. the Budget Hour will be calculated as Number of Periods * Hours Per Period (9.10.2014)
           budget_hours = Float(sfdc_object[:Service_Hours_per_Period__c]) *  Float(sfdc_object[:Number_of_Periods__c])
-          project[CGI.escape("DE:Budget Hours")] =  budget_hours unless helper.comparerFloat(project["DE:Budget Hours"],budget_hours.to_s,"Budget Hours")
+          project[CGI.escape("DE:Budget Hours")] =  budget_hours unless helper.comparerFloat((project["DE:Budget Hours"].nil? ? "0" : project["DE:Budget Hours"]),budget_hours.to_s,"Budget Hours")
           project.budget =  sfdc_object[:TotalPrice] unless helper.comparerString(project["budget"],sfdc_object[:TotalPrice],"budget")
         end
 
@@ -431,6 +431,7 @@ command :update_product do |c|
 
 
         if (sfdc_object[:TotalPrice] != nil and Float(sfdc_object[:TotalPrice]) != 0 and !sfdc_object[:Service_Hours_per_Period__c].nil? and !sfdc_object[:Number_of_Periods__c].nil? and project["DE:Project Type"] != "Maintenance") then
+          pp sfdc_object
           hours = Float(sfdc_object[:Service_Hours_per_Period__c]) *  Float(sfdc_object[:Number_of_Periods__c])
           #hours = Float(sfdc_object[:Total_Service_Hours__c])
           # Per request from M.H. the Budget Hour will be calculated as Number of Periods * Hours Per Period (9.10.2014)
@@ -1432,6 +1433,9 @@ post do |global,command,options,args|
 end
 
 on_error do |exception|
+  pp exception
+  pp exception.backtrace
+  pp exception.inspect
   @log.error exception
   @log.error exception.backtrace
   #pp exception
