@@ -431,7 +431,6 @@ command :update_product do |c|
 
 
         if (sfdc_object[:TotalPrice] != nil and Float(sfdc_object[:TotalPrice]) != 0 and !sfdc_object[:Service_Hours_per_Period__c].nil? and !sfdc_object[:Number_of_Periods__c].nil? and project["DE:Project Type"] != "Maintenance") then
-          pp sfdc_object
           hours = Float(sfdc_object[:Service_Hours_per_Period__c]) *  Float(sfdc_object[:Number_of_Periods__c])
           #hours = Float(sfdc_object[:Total_Service_Hours__c])
           # Per request from M.H. the Budget Hour will be calculated as Number of Periods * Hours Per Period (9.10.2014)
