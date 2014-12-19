@@ -749,6 +749,11 @@ command :add do |c|
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
         notification_to = {:to => "tom.kolich@gooddata.com"}
         notification_to[:cc] = ["jiri.stovicek@gooddata.com"]
+        if (li[:Opportunity][:Type] == "Powered by")
+          project["programID"] = "542124640019e2476c1e1c49dc2b315f"
+        elsif (li[:Opportunity][:Type] == "Direct")
+          project["programID"] = "542128040019fa3458191adec117b86c"
+        end
       elsif (li[:Opportunity][:Type] == "Powered by")
         if (li[:Service_Type__c] == "PS")
           project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
