@@ -744,8 +744,8 @@ command :add do |c|
 
 
       if ((!li[:Opportunity][:Services_Type_Subcategory__c].nil? and li[:Opportunity][:Services_Type_Subcategory__c] == "EOR") or (li[:Product][:Name] == 'GD-ENT-EOR') or (li[:Product][:Name] == 'EOR-CST'))
-        #project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
-        project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
+        project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+        #project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
         notification_to = {:to => "tom.kolich@gooddata.com"}
         notification_to[:cc] = ["jiri.stovicek@gooddata.com"]
