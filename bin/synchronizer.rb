@@ -703,7 +703,8 @@ command :add do |c|
       li[:Product] = product
     end
 
-    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (li[:Product_Family__c] == "Service" and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) or ( (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST') and Float(li[:Total_Service_Hours__c]) > 0)}
+    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:Total_Service_Hours__c]) > 0) or (li[:Product_Family__c] == "Service" and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) or ( (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST') and Float(li[:Total_Service_Hours__c]) > 0)}
+    #opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (li[:Product_Family__c] == "Service" and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) or ( (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST') and Float(li[:Total_Service_Hours__c]) > 0)}
     opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Opportunity] != nil}
 
     #and Float(li[:TotalPrice]) > 0
@@ -819,7 +820,6 @@ command :add do |c|
       project[CGI.escape("DE:Salesforce Type")] = li[:Opportunity][:Type]
 
       @log.info "Creating project #{project.name} with SFDC ID #{li[:Id]}"
-
       project = attask.project.add(project)[0]
       Pony.mail(:to => notification_to[:to],:cc => notification_to[:cc],:from => 'attask@gooddata.com', :subject => "New project with #{project.name} was create in attask.", :body => "Project link: https://gooddata.attask-ondemand.com/project/view?ID=#{project.ID}")
       @work_done = true
@@ -1390,7 +1390,7 @@ command :attask_to_salesforce do |c|
           helper.printLog(@log) if helper.changed
           @work_done = true if helper.changed
           if (send_mail)
-            Pony.mail(:to => user_mail,:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
+            Pony.mail(:to => user_mail,:from => 'attask@gooddata.com', :subject => "Project staffing: #{project["name"]}", :body => text)
           end
         rescue => e
           @log.error "There was error when updating opportunity #{op_value[:Id]}. Message: #{e.message}"
