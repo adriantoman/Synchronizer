@@ -420,6 +420,8 @@ command :update_product do |c|
         project.delete("DE:Total Service Hours")
         project.delete("DE:Investment Hours")
         project.delete("DE:Investment Reason")
+        project.delete("DE:Product Name")
+
         #project.delete("DE:Align Planned hours with Actual")
 
         attask.project.update(project) if helper.changed
