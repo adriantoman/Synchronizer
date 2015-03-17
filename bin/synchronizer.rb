@@ -272,7 +272,7 @@ command :update_product do |c|
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
-    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours,DE:MRR,DE:Investment Hours,DE:Investment Reason"})
+    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours,DE:MRR,DE:Investment Hours,DE:Investment Reason,DE:Product Name"})
 
     @mapping = attask.role.search({:fields => "ID,name"}).map{|r| {r["name"] => r["ID"]}}
 
@@ -332,9 +332,7 @@ command :update_product do |c|
         project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Opportunity][:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Opportunity][:Type],"Salesforce Type")
         project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Opportunity][:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Opportunity][:Name],"Salesforce Name")
         project[CGI.escape("DE:MRR")] = sfdc_object[:Opportunity][:Celigo_Trigger_Amount__c] unless helper.comparerString(project["DE:MRR"],sfdc_object[:Opportunity][:Celigo_Trigger_Amount__c],"MRR")
-
-
-
+        project[CGI.escape("DE:Product Name")] = sfdc_object[:Product][:Name] unless helper.comparerString(project["DE:Product Name"],sfdc_object[:Product][:Name],"DE:Product Name")
 
 
         # Additional Project Information - Type of Custome Fields
