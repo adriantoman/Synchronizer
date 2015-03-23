@@ -794,6 +794,10 @@ command :add do |c|
             :to => 'aaron.myhre@gooddata.com',
             :cc => ['sumeet.howe@gooddata.com','sumeet.howe@gooddata.com',"jiri.stovicek@gooddata.com","tom.kolich@gooddata.com","zd@gooddata.com"]
         }
+      else
+        project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
+        notification_to[:to] = 'jiri.stovicek@gooddata.com'
+        notification_to[:cc] = ['martin.hapl@gooddata.com']
       end
 
       project["companyID"] =  company.ID
