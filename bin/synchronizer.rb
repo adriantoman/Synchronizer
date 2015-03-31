@@ -1411,7 +1411,7 @@ command :attask_to_salesforce do |c|
           end
         rescue => e
           @log.error "There was error when updating opportunity #{op_value[:Id]}. Message: #{e.message}"
-          unless (e.message =~ /locked/)
+          unless (e.message =~ /locked/ or e.message =~ /insufficient access rights/)
             Pony.mail(:to => "adrian.toman@gooddata.com,martin.hapl@gooddata.com,jiri.stovicek@gooddata.com",:from => 'attask@gooddata.com', :subject => "Error - Attask => Salesforce Synchronization", :body => error_text + "\n Error message is #{e.message}")
           end
         end
