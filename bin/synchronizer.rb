@@ -1389,7 +1389,6 @@ command :attask_to_salesforce do |c|
             end
           end
           values = {}
-          pp project
           values["Project_Owner__c"] = project.owner.name unless helper.comparerString(op_value[:Project_Owner__c],project.owner.name,"Owner")
           values["Project_Group__c"] = project.group.name unless helper.comparerString(op_value[:Project_Group__c],project.group.name,"Group")
           values["Project_Stage__c"] = status_values[project.status] unless helper.comparerString(op_value[:Project_Stage__c],status_values[project.status],"Status")
