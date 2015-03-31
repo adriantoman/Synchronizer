@@ -25,6 +25,8 @@ require 'date'
 #require "databasedotcom"
 include GLI
 
+
+
 program_desc 'Program for synchronizing task'
 
 config_file 'synchronizer.conf'
@@ -1372,35 +1374,36 @@ command :attask_to_salesforce do |c|
       error_text = ""
       user_mail = ""
       if (!project.nil?)
-        helper = Synchronizer::Helper.new(op_value[:Id],op_value[:Name],"Opportunity")
-        if ((op_value[:Project_Stage__c] == "New" or op_value[:Project_Stage__c].nil?) and (project.status == "PLN" or project.status == "CUR" ))
-          # Per https://confluence.intgdc.com/pages/viewpage.action?pageId=145326495 we need to send email to Account Owner
-          value = accounts.find{|a| a[:Id] == op_value[:AccountId]}
-          user = users.find{|u| u[:Id] == value[:OwnerId]}
-          if (!user.nil?)
-            text = "Dear #{user[:Name]},\n\nServices completed staffing of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\nPlease contact the owner directly for kickoff planning.\n\nBest regards,\nServices Staffing Team"
-            error_text = "There is problem ith synchronization of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\n"
-            #Pony.mail(:to => "jiri.stovicek@gooddata.com",:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
-            user_mail = user[:Email]
-            send_mail = true
-          end
-        end
-        values = {}
-        values["Project_Owner__c"] = project.owner.name unless helper.comparerString(op_value[:Project_Owner__c],project.owner.name,"Owner")
-        values["Project_Group__c"] = project.group.name unless helper.comparerString(op_value[:Project_Group__c],project.group.name,"Group")
-        values["Project_Stage__c"] = status_values[project.status] unless helper.comparerString(op_value[:Project_Stage__c],status_values[project.status],"Status")
-
-        sf_status_update = op_value[:Status_Update__c].nil? ? "" : op_value[:Status_Update__c].gsub(/[^[:print:]]/,"")
-        at_status_update = project["DE:Status Update Overview"].nil? ? "" : project["DE:Status Update Overview"].gsub(/[^[:print:]]/,"")
-        values["Status_Update__c"] = project["DE:Status Update Overview"].nil? ? "" : project["DE:Status Update Overview"] unless helper.comparerString(sf_status_update,at_status_update,"Status Update")
-
-        if (now.wday == 1)
-          values["Services_Complete__c"] = project["percentComplete"] unless helper.comparerString(op_value[:Services_Complete__c],project["percentComplete"],"Services Complete")
-        end
-        values["Implementation_Status__c"] = project["DE:Condition Indicator"] unless helper.comparerString(op_value[:Implementation_Status__c],project["DE:Condition Indicator"],"Implementation Status")
-        values["Action_Plan__c"] = project["DE:Action Plan"] unless helper.comparerString(op_value[:Action_Plan__c],project["DE:Action Plan"],"Action Plan")
-        values["External_Org_Dependencies__c"] = project["DE:External Org Dependencies"] unless helper.comparerString(op_value[:External_Org_Dependencies__c],project["DE:External Org Dependencies"],"Action Plan")
         begin
+          helper = Synchronizer::Helper.new(op_value[:Id],op_value[:Name],"Opportunity")
+          if ((op_value[:Project_Stage__c] == "New" or op_value[:Project_Stage__c].nil?) and (project.status == "PLN" or project.status == "CUR" ))
+            # Per https://confluence.intgdc.com/pages/viewpage.action?pageId=145326495 we need to send email to Account Owner
+            value = accounts.find{|a| a[:Id] == op_value[:AccountId]}
+            user = users.find{|u| u[:Id] == value[:OwnerId]}
+            if (!user.nil?)
+              text = "Dear #{user[:Name]},\n\nServices completed staffing of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\nPlease contact the owner directly for kickoff planning.\n\nBest regards,\nServices Staffing Team"
+              error_text = "There is problem ith synchronization of project #{project["name"]} (https://attask-ondemand.com/project/view?ID=#{project.ID}) related to opportunity #{op_value[:Name]} (https://na6.salesforce.com/#{op_value[:Id]}).\n\nThe owner is: #{project.owner.name}\n\n"
+              #Pony.mail(:to => "jiri.stovicek@gooddata.com",:from => 'attask@gooddata.com', :subject => "Attask => Salesforce Synchronization", :body => text)
+              user_mail = user[:Email]
+              send_mail = true
+            end
+          end
+          values = {}
+          pp project
+          values["Project_Owner__c"] = project.owner.name unless helper.comparerString(op_value[:Project_Owner__c],project.owner.name,"Owner")
+          values["Project_Group__c"] = project.group.name unless helper.comparerString(op_value[:Project_Group__c],project.group.name,"Group")
+          values["Project_Stage__c"] = status_values[project.status] unless helper.comparerString(op_value[:Project_Stage__c],status_values[project.status],"Status")
+
+          sf_status_update = op_value[:Status_Update__c].nil? ? "" : op_value[:Status_Update__c].gsub(/[^[:print:]]/,"")
+          at_status_update = project["DE:Status Update Overview"].nil? ? "" : project["DE:Status Update Overview"].gsub(/[^[:print:]]/,"")
+          values["Status_Update__c"] = project["DE:Status Update Overview"].nil? ? "" : project["DE:Status Update Overview"] unless helper.comparerString(sf_status_update,at_status_update,"Status Update")
+
+          if (now.wday == 1)
+            values["Services_Complete__c"] = project["percentComplete"] unless helper.comparerString(op_value[:Services_Complete__c],project["percentComplete"],"Services Complete")
+          end
+          values["Implementation_Status__c"] = project["DE:Condition Indicator"] unless helper.comparerString(op_value[:Implementation_Status__c],project["DE:Condition Indicator"],"Implementation Status")
+          values["Action_Plan__c"] = project["DE:Action Plan"] unless helper.comparerString(op_value[:Action_Plan__c],project["DE:Action Plan"],"Action Plan")
+          values["External_Org_Dependencies__c"] = project["DE:External Org Dependencies"] unless helper.comparerString(op_value[:External_Org_Dependencies__c],project["DE:External Org Dependencies"],"Action Plan")
           client.update("Opportunity",op_value[:Id],values) if helper.changed
           helper.printLog(@log) if helper.changed
           @work_done = true if helper.changed
@@ -1409,7 +1412,7 @@ command :attask_to_salesforce do |c|
           end
         rescue => e
           @log.error "There was error when updating opportunity #{op_value[:Id]}. Message: #{e.message}"
-          if (send_mail)
+          unless (e.message =~ /locked/)
             Pony.mail(:to => "adrian.toman@gooddata.com,martin.hapl@gooddata.com,jiri.stovicek@gooddata.com",:from => 'attask@gooddata.com', :subject => "Error - Attask => Salesforce Synchronization", :body => error_text + "\n Error message is #{e.message}")
           end
         end
