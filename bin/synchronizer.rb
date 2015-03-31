@@ -772,6 +772,8 @@ command :add do |c|
         elsif (li[:Service_Type__c] == "EOR" or li[:Service_Type__c] == "CSM")
           project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
           project["programID"] = "542124640019e2476c1e1c49dc2b315f"
+        else
+          project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         end
 
         notification_to[:to] = 'martin.hapl@gooddata.com'
@@ -787,6 +789,8 @@ command :add do |c|
         elsif (li[:Service_Type__c] == "EOR" or li[:Service_Type__c] == "CSM")
           project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
           project["programID"] = "542128040019fa3458191adec117b86c"
+        else
+          project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         end
 
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
