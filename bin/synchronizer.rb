@@ -294,7 +294,7 @@ command :update_product do |c|
     products = products.output
 
     opportunityLineItem = Synchronizer::SalesForce.new(sf_username,sf_password)
-    opportunityLineItem.query("SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId,Service_Type__c,Services_Billing_Type__c,Approved_Investment_Hours__c,Investment_Reason__c FROM OpportunityLineItem",{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId,:Service_Type__c,:Services_Billing_Type__c,:Approved_Investment_Hours__c,:Investment_Reason__c],:as_hash => true})
+    opportunityLineItem.query("SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId,Service_Type__c,Services_Billing_Type__c,Approved_Investment_Hours__c,Investment_Reason__c,Allocated_Amount__c FROM OpportunityLineItem",{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId,:Service_Type__c,:Services_Billing_Type__c,:Approved_Investment_Hours__c,:Investment_Reason__c,:Allocated_Amount__c],:as_hash => true})
     opportunityLineItem_data = opportunityLineItem.output
 
 
@@ -330,6 +330,13 @@ command :update_product do |c|
 
 
       if (!sfdc_object.nil?)
+        total_price = nil
+        if (sfdc_object[:TotalPrice].nil? or sfdc_object[:TotalPrice] == "0" or sfdc_object[:TotalPrice] == "0.0" )
+          total_price = sfdc_object[:Allocated_Amount__c]
+        else
+          total_price = sfdc_object[:TotalPrice]
+        end
+
 
         project[CGI.escape("DE:Salesforce Type")] = sfdc_object[:Opportunity][:Type] unless helper.comparerString(project["DE:Salesforce Type"],sfdc_object[:Opportunity][:Type],"Salesforce Type")
         project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Opportunity][:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Opportunity][:Name],"Salesforce Name")
@@ -368,7 +375,7 @@ command :update_product do |c|
           # Per request from M.H. the Budget Hour will be calculated as Number of Periods * Hours Per Period (9.10.2014)
           budget_hours = Float(sfdc_object[:Service_Hours_per_Period__c]) *  Float(sfdc_object[:Number_of_Periods__c])
           project[CGI.escape("DE:Budget Hours")] =  budget_hours unless helper.comparerFloat((project["DE:Budget Hours"].nil? ? "0" : project["DE:Budget Hours"]),budget_hours.to_s,"Budget Hours")
-          project.budget =  sfdc_object[:TotalPrice] unless helper.comparerString(project["budget"],sfdc_object[:TotalPrice],"budget")
+          project.budget =  total_price unless helper.comparerString(project["budget"],total_price,"budget")
         end
 
 
@@ -432,12 +439,12 @@ command :update_product do |c|
         @work_done = true if helper.changed
 
 
-        if (sfdc_object[:TotalPrice] != nil and Float(sfdc_object[:TotalPrice]) != 0 and !sfdc_object[:Service_Hours_per_Period__c].nil? and !sfdc_object[:Number_of_Periods__c].nil? and project["DE:Project Type"] != "Maintenance") then
+        if (total_price != nil and Float(total_price) != 0 and !sfdc_object[:Service_Hours_per_Period__c].nil? and !sfdc_object[:Number_of_Periods__c].nil? and project["DE:Project Type"] != "Maintenance") then
           hours = Float(sfdc_object[:Service_Hours_per_Period__c]) *  Float(sfdc_object[:Number_of_Periods__c])
           #hours = Float(sfdc_object[:Total_Service_Hours__c])
           # Per request from M.H. the Budget Hour will be calculated as Number of Periods * Hours Per Period (9.10.2014)
           #hours = Integer(sfdc_object[:Service_Hours_per_Period__c]) *  Integer(sfdc_object[:Number_of_Periods__c])
-          budget = Float(sfdc_object[:TotalPrice])
+          budget = Float(total_price)
           rateValue = budget / hours if hours > 0
 
           rates = attask.rate.search({},{:projectID => project.ID})
