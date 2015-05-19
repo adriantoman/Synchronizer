@@ -741,6 +741,7 @@ command :add do |c|
     # Find all product which were not created already
     opportunityLineItem_data = opportunityLineItem_data.find_all do |li|
       project = projects.find {|p| !p["DE:Product ID"].nil? and p["DE:Product ID"].casecmp(li[:Id]) == 0 ? true : false}
+
       if (project.nil?)
         true
       else
@@ -751,6 +752,7 @@ command :add do |c|
     count = 0
 
     opportunityLineItem_data.each do |li|
+
 
 
       notification_to = {}
@@ -858,14 +860,13 @@ command :add do |c|
       project[CGI.escape("DE:Salesforce Type")] = li[:Opportunity][:Type]
 
       @log.info "Creating project #{project.name} with SFDC ID #{li[:Id]}"
-      #project = attask.project.add(project)[0]
-      #Pony.mail(:to => notification_to[:to],:cc => notification_to[:cc],:from => 'attask@gooddata.com', :subject => "New project with #{project.name} was create in attask.", :body => "Project link: https://gooddata.attask-ondemand.com/project/view?ID=#{project.ID}")
+      project = attask.project.add(project)[0]
+      Pony.mail(:to => notification_to[:to],:cc => notification_to[:cc],:from => 'attask@gooddata.com', :subject => "New project with #{project.name} was create in attask.", :body => "Project link: https://gooddata.attask-ondemand.com/project/view?ID=#{project.ID}")
       @work_done = true
       count = count + 1
     end
   end
 end
-
 
 desc 'Spredsheet'
 command :spredsheet do |c|
