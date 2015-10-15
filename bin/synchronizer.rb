@@ -428,31 +428,31 @@ command :update_product do |c|
         #end
 
 
-        project.delete("DE:Salesforce ID")
-        project.delete("DE:Project Type")
-        project.delete("DE:Salesforce Type")
-        project.delete("DE:Salesforce Name")
-        project.delete("DE:Service Type")
-        project.delete("DE:Budget Hours")
-        project.delete("DE:Service Type")
-        project.delete("DE:Billing Type")
-        project.delete("DE:Total Service Hours")
-        project.delete("DE:Product ID")
-        project.delete("DE:Hours per Period")
-        project.delete("DE:Number of Periods")
-        project.delete("DE:Expiration Period")
-        project.delete("DE:Total Service Hours")
-        project.delete("DE:Investment Hours")
-        project.delete("DE:Investment Reason")
-        project.delete("DE:Product Name")
-
-        #project.delete("DE:Align Planned hours with Actual")
-
-        attask.project.update(project) if helper.changed
-
-        helper.printLog(@log) if helper.changed
-        @work_done = true if helper.changed
-
+        if helper.changed
+           backup_product_id = project["DE:Product ID"]
+           project.delete("DE:Salesforce ID")
+           project.delete("DE:Project Type")
+           project.delete("DE:Salesforce Type")
+           project.delete("DE:Salesforce Name")
+           project.delete("DE:Service Type")
+           project.delete("DE:Budget Hours")
+           project.delete("DE:Service Type")
+           project.delete("DE:Billing Type")
+           project.delete("DE:Total Service Hours")
+           project.delete("DE:Product ID")
+           project.delete("DE:Hours per Period")
+           project.delete("DE:Number of Periods")
+           project.delete("DE:Expiration Period")
+           project.delete("DE:Total Service Hours")
+           project.delete("DE:Investment Hours")
+           project.delete("DE:Investment Reason")
+           project.delete("DE:Product Name")
+           attask.project.update(project)
+                               # It is used in further changes
+           project["DE:Product ID"] = backup_product_id
+           helper.printLog(@log)
+          @work_done = true
+        end
 
         if (total_price != nil and Float(total_price) != 0 and !budget_hours.nil? and budget_hours > 0 and project["DE:Project Type"] != "Maintenance" and ((!sfdc_object[:Service_Hours_per_Period__c].nil? and !sfdc_object[:Number_of_Periods__c].nil?) or (!sfdc_object[:Allocated_Amount__c].nil? and !sfdc_object[:Approved_Investment_Hours__c].nil?))) then
           hours = budget_hours
