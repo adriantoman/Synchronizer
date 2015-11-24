@@ -19,6 +19,7 @@ Gem::Specification.new do |s|
 
   # specify any dependencies here; for example:
   s.add_dependency "builder","~> 3.0.0"
+  s.add_dependency "i18n","0.6.11"
   s.add_dependency "httparty","0.11"
   s.add_dependency "hashie"
   s.add_dependency "json"

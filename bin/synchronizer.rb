@@ -277,7 +277,7 @@ command :update_product do |c|
 
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
-    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours,DE:MRR,DE:Investment Hours,DE:Investment Reason,DE:Product Name"})
+    projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours,DE:MRR,DE:Investment Hours,DE:Investment Reason,DE:Product Name,DE:Account Owner"})
 
     @mapping = attask.role.search({:fields => "ID,name"}).map{|r| {r["name"] => r["ID"]}}
 
@@ -286,7 +286,7 @@ command :update_product do |c|
     salesforce.query("SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId,Celigo_Trigger_Amount__c FROM Opportunity",{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId,:Celigo_Trigger_Amount],:as_hash => true})
 
     account = Synchronizer::SalesForce.new(sf_username,sf_password)
-    account.query("SELECT Id, Name FROM Account",{:values => [:Id,:Name],:as_hash => true})
+    account.query("SELECT Id, Name, owner.name FROM Account",{:values => [:Id,:Name],:as_hash => true})
 
     pricebookentry = Synchronizer::SalesForce.new(sf_username,sf_password)
     pricebookentry.query("SELECT Id, Product2Id FROM PricebookEntry",{:values => [:Id,:Product2Id],:as_hash => true})
@@ -345,7 +345,12 @@ command :update_product do |c|
         project[CGI.escape("DE:Salesforce Name")] = sfdc_object[:Opportunity][:Name] unless helper.comparerString(project["DE:Salesforce Name"],sfdc_object[:Opportunity][:Name],"Salesforce Name")
         project[CGI.escape("DE:MRR")] = sfdc_object[:Opportunity][:Celigo_Trigger_Amount__c] unless helper.comparerString(project["DE:MRR"],sfdc_object[:Opportunity][:Celigo_Trigger_Amount__c],"MRR")
         project[CGI.escape("DE:Product Name")] = sfdc_object[:Product][:Name] unless helper.comparerString(project["DE:Product Name"],sfdc_object[:Product][:Name],"DE:Product Name")
+        project[CGI.escape("DE:Product Name")] = sfdc_object[:Product][:Name] unless helper.comparerString(project["DE:Product Name"],sfdc_object[:Product][:Name],"DE:Product Name")
 
+
+        #Update account owner
+        account_owner = account.output.find{|a| a[:Id] == sfdc_object[:Opportunity][:AccountId]}[:Owner][:Name]
+        project[CGI.escape("DE:Account Owner")] = account_owner unless helper.comparerString(project["DE:Account Owner"],account_owner,"DE:Account Owner")
 
         # Additional Project Information - Type of Custome Fields
         if (project["categoryID"] == "50f5a7ee000d0278de51cc3a4d803e62") then
@@ -450,10 +455,12 @@ command :update_product do |c|
            project.delete("DE:Investment Hours")
            project.delete("DE:Investment Reason")
            project.delete("DE:Product Name")
+           project.delete("DE:Account Owner")
+
+           helper.printLog(@log)
            attask.project.update(project)
                                # It is used in further changes
            project["DE:Product ID"] = backup_product_id
-           helper.printLog(@log)
           @work_done = true
         end
 
@@ -1350,11 +1357,11 @@ command :attask_to_salesforce do |c|
 
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
     attask = Attask.client("gooddata",at_username,at_password)
-    projects = attask.project.search({:fields => "ID,group:name,owner:name,name,status,percentComplete",:customFields => "DE:Salesforce ID,DE:Status Update Overview,DE:Action Plan,DE:External Org Dependencies,DE:Condition Indicator,DE:Budget Hours"})
+    projects = attask.project.search({:fields => "ID,group:name,owner:name,name,status,percentComplete,description",:customFields => "DE:Salesforce ID,DE:Status Update Overview,DE:Action Plan,DE:External Org Dependencies,DE:Condition Indicator,DE:Budget Hours"})
 
 
     salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
-    salesforce.query("SELECT Id,Project_Owner__c,Project_Group__c,Project_Stage__c,Status_Update__c,Services_Complete__c,Implementation_Status__c,Action_Plan__c,External_Org_Dependencies__c,AccountId,Name FROM Opportunity",{:values => [:Id,:Project_Owner__c,:Project_Group__c,:Project_Stage__c,:Status_Update__c,:Services_Complete__c,:Implementation_Status__c,:Action_Plan__c,:External_Org_Dependencies__c,:AccountId,:Name],:as_hash => true})
+    salesforce.query("SELECT Id,Project_Owner__c,Project_Group__c,Project_Stage__c,Status_Update__c,Services_Complete__c,Implementation_Status__c,Action_Plan__c,External_Org_Dependencies__c,AccountId,Name,Project_Description__c FROM Opportunity",{:values => [:Id,:Project_Owner__c,:Project_Group__c,:Project_Stage__c,:Status_Update__c,:Services_Complete__c,:Implementation_Status__c,:Action_Plan__c,:External_Org_Dependencies__c,:AccountId,:Name,:Project_Description__c],:as_hash => true})
     opportunities = salesforce.output
 
     account = Synchronizer::SalesForce.new(sf_username,sf_password)
@@ -1426,6 +1433,8 @@ command :attask_to_salesforce do |c|
           values["Project_Owner__c"] = project.owner.name unless helper.comparerString(op_value[:Project_Owner__c],project.owner.name,"Owner")
           values["Project_Group__c"] = project.group.name unless helper.comparerString(op_value[:Project_Group__c],project.group.name,"Group")
           values["Project_Stage__c"] = status_values[project.status] unless helper.comparerString(op_value[:Project_Stage__c],status_values[project.status],"Status")
+          values["Project_Description__c"] = project.description unless helper.comparerString(op_value[:Project_Description__c],project.description,"Description")
+
 
           sf_status_update = op_value[:Status_Update__c].nil? ? "" : op_value[:Status_Update__c].gsub(/[^[:print:]]/,"")
           at_status_update = project["DE:Status Update Overview"].nil? ? "" : project["DE:Status Update Overview"].gsub(/[^[:print:]]/,"")
@@ -1437,8 +1446,8 @@ command :attask_to_salesforce do |c|
           values["Implementation_Status__c"] = project["DE:Condition Indicator"] unless helper.comparerString(op_value[:Implementation_Status__c],project["DE:Condition Indicator"],"Implementation Status")
           values["Action_Plan__c"] = project["DE:Action Plan"] unless helper.comparerString(op_value[:Action_Plan__c],project["DE:Action Plan"],"Action Plan")
           values["External_Org_Dependencies__c"] = project["DE:External Org Dependencies"] unless helper.comparerString(op_value[:External_Org_Dependencies__c],project["DE:External Org Dependencies"],"Action Plan")
-          client.update("Opportunity",op_value[:Id],values) if helper.changed
           helper.printLog(@log) if helper.changed
+          client.update("Opportunity",op_value[:Id],values) if helper.changed
           @work_done = true if helper.changed
           if (send_mail)
             Pony.mail(:to => user_mail,:from => 'attask@gooddata.com', :subject => "Project staffing: #{project["name"]}", :body => text)
