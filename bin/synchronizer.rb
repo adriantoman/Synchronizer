@@ -622,6 +622,7 @@ command :init do |c|
     attask.milestone.exportToCsv({:filename => "milestone.csv",:filepath => export,:gzip => true})
     attask.portfolio.exportToCsv({:filename => "portfolio.csv",:filepath => export,:gzip => true})
     attask.program.exportToCsv({:filename => "program.csv",:filepath => export,:gzip => true})
+    attask.reservedtime.exportToCsv({:filename => "reservedtime.csv",:filepath => export,:gzip => true})
 
     attask.project.exportToCsv({
                                   :fields => "actualCompletionDate,actualStartDate,description,ID,ownerID,percentComplete,status,lastUpdateDate,plannedStartDate,plannedCompletionDate,projectedStartDate,projectedCompletionDate,name",
@@ -657,6 +658,7 @@ command :init do |c|
     main["milestone"] = createHash(attask.milestone.metadata["data"])
     main["portfolio"] = createHash(attask.portfolio.metadata["data"])
     main["program"] = createHash(attask.program.metadata["data"])
+    main["reservedtime"] = createHash(attask.reservedtime.metadata["data"])
 
 
     File.open(export + "metadata.json","w") do |f|
