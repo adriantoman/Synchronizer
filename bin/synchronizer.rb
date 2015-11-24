@@ -273,6 +273,9 @@ command :update_product do |c|
     attask = Attask.client("gooddata",at_username,at_password)
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
 
+    @log.info "Starting SFDC -> Attask - update synchronization"
+
+
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
     projects = attask.project.search({:fields => "ID,companyID,groupID,status,condition,conditionType,budget,categoryID,name",:customFields => "DE:Salesforce ID,DE:Project Type,DE:Salesforce Type,DE:Service Type,DE:Salesforce Name,DE:Product ID,DE:Billing Type,DE:Total Service Hours,DE:Budget Hours,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period,DE:Total Service Hours,DE:MRR,DE:Investment Hours,DE:Investment Reason,DE:Product Name"})
 
@@ -508,6 +511,9 @@ command :update_product do |c|
       end
 
     end
+
+    @log.info "Finished SFDC -> Attask - update synchronization"
+
   end
 end
 
@@ -683,6 +689,9 @@ command :add do |c|
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
     attask = Attask.client("gooddata",at_username,at_password)
 
+
+    @log.info "Starting SFDC -> Attask - add synchronization"
+
     @user = {
         "West" => "gautam.kher@gooddata.com",
         "Partner" => "gautam.kher@gooddata.com",
@@ -802,7 +811,7 @@ command :add do |c|
         end
 
         notification_to[:to] = 'martin.hapl@gooddata.com'
-        notification_to[:cc] = ['karel.novak@gooddata.com',"tom.kolich@gooddata.com","zd@gooddata.com",'sumeet.howe@gooddata.com']
+        notification_to[:cc] = ['karel.novak@gooddata.com',"tom.kolich@gooddata.com","zd@gooddata.com",'sumeet.howe@gooddata.com','ryan.snyder@gooddata.com']
         project["groupID"] = "51dece1700022dc5b57063720458e8d2"
       elsif (li[:Opportunity][:Type] == "Direct")
         if (li[:Service_Type__c] == "PS")
@@ -821,12 +830,12 @@ command :add do |c|
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
         notification_to = {
             :to => 'martin.hapl@gooddata.com',
-            :cc => ['sumeet.howe@gooddata.com',"tom.kolich@gooddata.com","zd@gooddata.com","karel.novak@gooddata.com"]
+            :cc => ['sumeet.howe@gooddata.com',"tom.kolich@gooddata.com","zd@gooddata.com","karel.novak@gooddata.com",'ryan.snyder@gooddata.com']
         }
       else
         project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
         notification_to[:to] = 'martin.hapl@gooddata.com'
-        notification_to[:cc] = ['karel.novak@gooddata.com']
+        notification_to[:cc] = ['karel.novak@gooddata.com','ryan.snyder@gooddata.com']
       end
 
       project["companyID"] =  company.ID
@@ -865,6 +874,7 @@ command :add do |c|
       @work_done = true
       count = count + 1
     end
+    @log.info "Finished SFDC -> Attask - add synchronization"
   end
 end
 
