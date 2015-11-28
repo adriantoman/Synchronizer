@@ -1433,7 +1433,12 @@ command :attask_to_salesforce do |c|
           values["Project_Owner__c"] = project.owner.name unless helper.comparerString(op_value[:Project_Owner__c],project.owner.name,"Owner")
           values["Project_Group__c"] = project.group.name unless helper.comparerString(op_value[:Project_Group__c],project.group.name,"Group")
           values["Project_Stage__c"] = status_values[project.status] unless helper.comparerString(op_value[:Project_Stage__c],status_values[project.status],"Status")
-          values["Project_Description__c"] = project.description.strip unless helper.comparerString(op_value[:Project_Description__c].strip,project.description.strip,"Description")
+
+
+          sf_description = op_value[:Project_Description__c].nil? ? nil : op_value[:Project_Description__c].strip
+          at_description = project.description.nil? ? nil : project.description.strip
+
+          values["Project_Description__c"] = at_description unless helper.comparerString(sf_description,at_description,"Description")
 
           sf_status_update = op_value[:Status_Update__c].nil? ? "" : op_value[:Status_Update__c].gsub(/[^[:print:]]/,"")
           at_status_update = project["DE:Status Update Overview"].nil? ? "" : project["DE:Status Update Overview"].gsub(/[^[:print:]]/,"")
