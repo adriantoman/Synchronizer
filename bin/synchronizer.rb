@@ -797,7 +797,7 @@ command :add do |c|
       project.status = "IDA"
 
 
-      if ((!li[:Opportunity][:Services_Type_Subcategory__c].nil? and li[:Opportunity][:Services_Type_Subcategory__c] == "EOR") or (li[:Product][:Name] == 'GD-ENT-EOR') or (li[:Product][:Name] == 'EOR-CST'))
+      if ((!li[:Opportunity][:Services_Type_Subcategory__c].nil? and li[:Opportunity][:Services_Type_Subcategory__c] == "EOR") or ( ['GD-ENT-EOR','EOR-CST'].include?(li[:Product][:Name])))
         project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
         #project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
@@ -808,6 +808,14 @@ command :add do |c|
         elsif (li[:Opportunity][:Type] == "Direct")
           project["programID"] = "542128040019fa3458191adec117b86c"
         end
+      elsif ((['PS-SA-ESS','PS-SA-PRO','PS-SA-ENT'].include?(li[:Product][:Name])))
+        project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+        #project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
+        project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
+        notification_to = {:to => "tom.kolich@gooddata.com"}
+        notification_to[:cc] = ["martin.hapl@gooddata.com"]
+        project["programID"] = "54d36530005ccbe7ea635b58163d9e48"
+
       elsif (li[:Opportunity][:Type] == "Powered by")
         if (li[:Service_Type__c] == "PS")
           project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
@@ -819,7 +827,7 @@ command :add do |c|
           project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
           project["programID"] = "542124640019e2476c1e1c49dc2b315f"
         else
-          project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
+          project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
         end
 
         notification_to[:to] = 'martin.hapl@gooddata.com'
@@ -836,7 +844,7 @@ command :add do |c|
           project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
           project["programID"] = "542128040019fa3458191adec117b86c"
         else
-          project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
+          project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
         end
 
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
@@ -1339,7 +1347,6 @@ end
 
 
 desc 'Attask to SF synchronization'
-
 command :attask_to_salesforce do |c|
   c.desc 'Username to SF account'
   c.flag [:sf_config_file]
@@ -1469,6 +1476,119 @@ command :attask_to_salesforce do |c|
     end
   end
 end
+
+desc 'Add new projects to SF'
+command :expire_hours do |c|
+
+  c.desc 'Config file'
+  c.flag [:config_file]
+
+  c.action do |global_options,options,args|
+    config_file = options[:config_file]
+    yaml = YAML.load_file(config_file)
+    at_username = yaml["attask_login"]
+    at_password = yaml["attask_password"]
+    sf_username = yaml["username"]
+    sf_password = yaml["password"] + yaml["token"]
+
+
+    attask = Attask.client("gooddata",at_username,at_password)
+    #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
+
+
+
+    SKU_TO_PROCESS = ['PS-SA-ESS','PS-SA-PRO','PS-SA-ENT']
+
+    HOURS_TYPES = {
+        :billable => '50f590220005f618b8baba46054f240d'
+
+    }
+
+    @log.info 'Starting expire hours'
+
+
+    #users = attask.user.search({:fields => "ID,name",:customFields => ""})
+    projects = attask.project.search({:fields => 'ID,name',:customFields => 'DE:Salesforce Name,DE:Product ID'})
+
+    salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
+    salesforce.query('SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId,Celigo_Trigger_Amount__c,Contract_Start_Date__c FROM Opportunity',{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId,:Celigo_Trigger_Amount,:Contract_Start_Date__c],:as_hash => true})
+
+    account = Synchronizer::SalesForce.new(sf_username,sf_password)
+    account.query('SELECT Id, Name, owner.name FROM Account',{:values => [:Id,:Name],:as_hash => true})
+
+    pricebookentry = Synchronizer::SalesForce.new(sf_username,sf_password)
+    pricebookentry.query('SELECT Id, Product2Id FROM PricebookEntry',{:values => [:Id,:Product2Id],:as_hash => true})
+    pricebookentry = pricebookentry.output
+
+    products = Synchronizer::SalesForce.new(sf_username,sf_password)
+    products.query('SELECT Id,Name FROM Product2',{:values => [:Id,:Name],:as_hash => true})
+    products = products.output
+
+    opportunityLineItem = Synchronizer::SalesForce.new(sf_username,sf_password)
+    opportunityLineItem.query('SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId,Service_Type__c,Services_Billing_Type__c,Approved_Investment_Hours__c,Investment_Reason__c,Allocated_Amount__c FROM OpportunityLineItem',{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId,:Service_Type__c,:Services_Billing_Type__c,:Approved_Investment_Hours__c,:Investment_Reason__c,:Allocated_Amount__c],:as_hash => true})
+    opportunityLineItem_data = opportunityLineItem.output
+
+    salesforce_data = salesforce.output
+
+    opportunityLineItem_data.each do |li|
+      s = salesforce_data.find{|s| s[:Id] == li[:OpportunityId]}
+
+      li[:Opportunity] = s
+      pe = pricebookentry.find do |e|
+        e[:Id] == li[:PricebookEntryId]
+      end
+      product = products.find do |p|
+        p[:Id] == pe[:Product2Id]
+      end
+      li[:Product] = product
+    end
+
+    count = 0
+
+    projects = projects.find_all{|p| (p['DE:Product ID'] != nil and p['DE:Product ID'] != '' and p['DE:Product ID'] != p['DE:Salesforce ID']) }
+    projects.find_all{|p| p["ID"] == "54f9b8650026022817d44996062f3538"}.each do |project|
+      sfdc_object = opportunityLineItem_data.find {|li| li[:Id] == project['DE:Product ID']}
+
+      #if ((SKU_TO_PROCESS.include?(sfdc_object[:Product][:Name])))
+        @log.info "Processing #{project.name} (#{project['ID']})"
+
+
+        hours_per_period = project[CGI.escape("DE:Hours per Period")]
+        number_of_periods = project[CGI.escape("DE:Number of Periods")]
+        expiration_period = project[CGI.escape("DE:Expiration Period")]
+
+        pp hours_per_period
+        pp number_of_periods
+        pp expiration_period
+
+        pp sfdc_object[:Opportunity][:Contract_Start_Date__c]
+
+        @log.info "Hours_per_period -> #{hours_per_period}, Number of period -> #{number_of_periods}, expiration_period -> #{expiration_period}"
+
+
+
+        hours = attask.hour.search({},{:projectID => project.ID})
+
+
+
+        pp hours
+        fail "kokos"
+
+      #end
+
+
+
+
+
+    end
+
+
+
+
+   end
+
+end
+
 
 
 
