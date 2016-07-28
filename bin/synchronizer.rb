@@ -21,6 +21,7 @@ require "lib/synchronizer.rb"
 require "lib/helper.rb"
 require "lib/google_downloader.rb"
 require "lib/s3_loader.rb"
+require 'lib/expiration_helper.rb'
 require 'date'
 #require "databasedotcom"
 include GLI
@@ -754,6 +755,7 @@ command :add do |c|
       li[:Product] = product
     end
 
+
     opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (["Service","Services","service","services"].include?(li[:Product_Family__c]) and Float(li[:Total_Service_Hours__c]) > 0) or (["Service","Services","service","services"].include?(li[:Product_Family__c]) and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) or ( (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST') and Float(li[:Total_Service_Hours__c]) > 0)}
     #opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (li[:Product_Family__c] == "Service" and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) or ( (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST') and Float(li[:Total_Service_Hours__c]) > 0)}
     opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Opportunity] != nil}
@@ -1477,7 +1479,7 @@ command :attask_to_salesforce do |c|
   end
 end
 
-desc 'Add new projects to SF'
+desc 'Expire hours'
 command :expire_hours do |c|
 
   c.desc 'Config file'
@@ -1495,9 +1497,7 @@ command :expire_hours do |c|
     attask = Attask.client("gooddata",at_username,at_password)
     #attask = Attask.client("gooddata",at_username,at_password,{:sandbox => true})
 
-
-
-    SKU_TO_PROCESS = ['PS-SA-ESS','PS-SA-PRO','PS-SA-ENT']
+    SKU_TO_PROCESS = ['PS-SA-ESS','PS-SA-PRO','PS-SA-ENT','PS-SA-ESS-OLD']
 
     HOURS_TYPES = {
         :billable => '50f590220005f618b8baba46054f240d'
@@ -1508,7 +1508,8 @@ command :expire_hours do |c|
 
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
-    projects = attask.project.search({:fields => 'ID,name',:customFields => 'DE:Salesforce Name,DE:Product ID'})
+    projects = attask.project.search({:fields => 'ID,name',:customFields => 'DE:Salesforce Name,DE:Product ID,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period'})
+
 
     salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
     salesforce.query('SELECT Amount, Id, Type,x1st_year_services_total__c,ps_hours__c, Services_Type__c, Services_Type_Subcategory__c, Practice_Group__c,StageName, Name,AccountId,Celigo_Trigger_Amount__c,Contract_Start_Date__c FROM Opportunity',{:values => [:Id,:Amount,:x1st_year_services_total__c,:ps_hours__c,:Services_Type__c,:Services_Type_Subcategory__c,:Practice_Group__c,:Type,:StageName,:Name,:AccountId,:Celigo_Trigger_Amount,:Contract_Start_Date__c],:as_hash => true})
@@ -1525,7 +1526,7 @@ command :expire_hours do |c|
     products = products.output
 
     opportunityLineItem = Synchronizer::SalesForce.new(sf_username,sf_password)
-    opportunityLineItem.query('SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId,Service_Type__c,Services_Billing_Type__c,Approved_Investment_Hours__c,Investment_Reason__c,Allocated_Amount__c FROM OpportunityLineItem',{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId,:Service_Type__c,:Services_Billing_Type__c,:Approved_Investment_Hours__c,:Investment_Reason__c,:Allocated_Amount__c],:as_hash => true})
+    opportunityLineItem.query('SELECT Expiration_Period__c,Id,Number_of_Periods__c,Service_Hours_per_Period__c,OpportunityId,Product_Family__c,TotalPrice,Total_Service_Hours__c,PricebookEntryId,Service_Type__c,Services_Billing_Type__c,Approved_Investment_Hours__c,Investment_Reason__c,Allocated_Amount__c,SKU_Start__c,SKU_End__c FROM OpportunityLineItem',{:values => [:Expiration_Period__c,:Id,:Number_of_Periods__c,:Service_Hours_per_Period__c,:OpportunityId,:Product_Family__c,:TotalPrice,:Total_Service_Hours__c,:PricebookEntryId,:Service_Type__c,:Services_Billing_Type__c,:Approved_Investment_Hours__c,:Investment_Reason__c,:Allocated_Amount__c,:SKU_Start__c,:SKU_End__c],:as_hash => true})
     opportunityLineItem_data = opportunityLineItem.output
 
     salesforce_data = salesforce.output
@@ -1543,48 +1544,63 @@ command :expire_hours do |c|
       li[:Product] = product
     end
 
-    count = 0
+    opportunityLineItem_data.delete_if{|li| !SKU_TO_PROCESS.include?(li[:Product][:Name])}
 
     projects = projects.find_all{|p| (p['DE:Product ID'] != nil and p['DE:Product ID'] != '' and p['DE:Product ID'] != p['DE:Salesforce ID']) }
-    projects.find_all{|p| p["ID"] == "54f9b8650026022817d44996062f3538"}.each do |project|
-      sfdc_object = opportunityLineItem_data.find {|li| li[:Id] == project['DE:Product ID']}
 
-      #if ((SKU_TO_PROCESS.include?(sfdc_object[:Product][:Name])))
+    opportunityLineItem_data.each do |sfdc|
+      project = projects.find{|p| sfdc[:Id] == p['DE:Product ID'] }
+
+      if (!project.nil?)
         @log.info "Processing #{project.name} (#{project['ID']})"
 
-
-        hours_per_period = project[CGI.escape("DE:Hours per Period")]
-        number_of_periods = project[CGI.escape("DE:Number of Periods")]
-        expiration_period = project[CGI.escape("DE:Expiration Period")]
-
-        pp hours_per_period
-        pp number_of_periods
-        pp expiration_period
-
-        pp sfdc_object[:Opportunity][:Contract_Start_Date__c]
-
+        # Possible expiration periods Year,Month,Quarter
+        hours_per_period = project["DE:Hours per Period"]
+        number_of_periods = project["DE:Number of Periods"]
+        expiration_period = project["DE:Expiration Period"]
         @log.info "Hours_per_period -> #{hours_per_period}, Number of period -> #{number_of_periods}, expiration_period -> #{expiration_period}"
 
 
-
-        hours = attask.hour.search({},{:projectID => project.ID})
-
-
-
-        pp hours
-        fail "kokos"
-
-      #end
+        sku_start = Time.parse(sfdc[:SKU_Start__c])
+        #sku_start = Time.parse("2016-01-01")
 
 
+        if (sku_start < Time.now)
+          hours = attask.hour.search({},{:projectID => project.ID})
+          hours.delete_if{|hour| hour['hourTypeID'] != HOURS_TYPES[:billable] or (Time.parse(hour['entryDate']).month >= Time.now.month and Time.parse(hour['entryDate']).year >= Time.now.year) }
 
 
+          grouped_hours = hours.group_by do |hour|
+            entry_date = Time.parse(hour["entryDate"])
+            case expiration_period
+              when 'Year'
+                entry_date.year
+              when 'Month'
+                "#{entry_date.year}-#{entry_date.month}"
+              when 'Quarter'
+                "#{entry_date.year}-#{((entry_date.month)-1)/3 + 1}"
+            end
+          end
+
+          grouped_hours.each_pair do |key,values|
+            number_of_hours_in_current_period = 0
+            values.each do |v|
+              number_of_hours_in_current_period += v['hours']
+            end
+
+            if (hours_per_period > number_of_hours_in_current_period)
+              # lets rock
+
+              @log.info "Found #{hours_per_period - number_of_hours_in_current_period}  hours to expire"
+              task_id = Synchronizer::ExpirationHelper.create_expiration_task(project.ID,{'attask' => attask})
+              Synchronizer::ExpirationHelper.expire_hours(hours_per_period - number_of_hours_in_current_period,expiration_period,key,{'attask' => attask,'project_id' => project.ID,'task_id' => task_id,'billable_id' => HOURS_TYPES[:billable]})
+            end
+          end
+
+        end
+      end
 
     end
-
-
-
-
    end
 
 end
@@ -1675,6 +1691,8 @@ end
 def escape(str)
   ActiveSupport::Multibyte::Chars.new(str).normalize(:d).split(//u).reject { |e| e.length > 1 }.join
 end
+
+
 
 
 exit GLI.run(ARGV)
