@@ -22,6 +22,7 @@ require "lib/helper.rb"
 require "lib/google_downloader.rb"
 require "lib/s3_loader.rb"
 require 'lib/expiration_helper.rb'
+require 'lib/gooddata_month.rb'
 require 'date'
 #require "databasedotcom"
 include GLI
@@ -1558,42 +1559,83 @@ command :expire_hours do |c|
         hours_per_period = project["DE:Hours per Period"]
         number_of_periods = project["DE:Number of Periods"]
         expiration_period = project["DE:Expiration Period"]
-        @log.info "Hours_per_period -> #{hours_per_period}, Number of period -> #{number_of_periods}, expiration_period -> #{expiration_period}"
 
-
-        sku_start = Time.parse(sfdc[:SKU_Start__c])
-        #sku_start = Time.parse("2016-01-01")
-
+        sku_start = Synchronizer::ExpirationHelper.round_start_date(sfdc[:SKU_Start__c])
+        @log.info "Hours_per_period -> #{hours_per_period}, Number of period -> #{number_of_periods}, expiration_period -> #{expiration_period} (SKU START #{sfdc[:SKU_Start__c]} -> #{sku_start})"
 
         if (sku_start < Time.now)
+
+          default_running_totals = Synchronizer::ExpirationHelper.generate_default_running_total(sku_start,hours_per_period,number_of_periods,expiration_period)
+
           hours = attask.hour.search({},{:projectID => project.ID})
           hours.delete_if{|hour| hour['hourTypeID'] != HOURS_TYPES[:billable] or (Time.parse(hour['entryDate']).month >= Time.now.month and Time.parse(hour['entryDate']).year >= Time.now.year) }
 
-
-          grouped_hours = hours.group_by do |hour|
+          grouped_hours = {}
+          hours.group_by do |hour|
             entry_date = Time.parse(hour["entryDate"])
-            case expiration_period
-              when 'Year'
-                entry_date.year
-              when 'Month'
-                "#{entry_date.year}-#{entry_date.month}"
-              when 'Quarter'
-                "#{entry_date.year}-#{((entry_date.month)-1)/3 + 1}"
+            gm = Synchronizer::GoodDataMonth.new(entry_date,expiration_period)
+            if (grouped_hours.include?(gm.key))
+              grouped_hours[gm.key][:hours] << hour
+            else
+              grouped_hours[gm.key] = {
+                  :gm => gm,
+                  :hours => [hour]
+              }
             end
           end
 
+
+          # grouped_hours = hours.group_by do |hour|
+          #   entry_date = Time.parse(hour["entryDate"])
+          #   gm = Synchronizer::GoodDataMonth.new(entry_date,expiration_period)
+          #   gm.key
+          # end
+
+
+          running_total = {}
           grouped_hours.each_pair do |key,values|
-            number_of_hours_in_current_period = 0
-            values.each do |v|
-              number_of_hours_in_current_period += v['hours']
+            if (values.include?(:hours))
+              values[:hours].map{|value| running_total.include?(key) ? running_total[key][:hours_count] += value['hours'] : running_total[key] = {:gm => values[:gm],:hours_count => value['hours'] }}
             end
+          end
 
-            if (hours_per_period > number_of_hours_in_current_period)
+          out = running_total.sort_by do |k,v|
+            v[:gm].numeric_key
+          end
+
+          out2 = grouped_hours.sort_by do |k,v|
+            Integer(k.split('-')[0])*12 + (k.split('-').count > 1 ? Integer(k.split('-')[1]) : 0)
+          end
+
+          grouped_hours = Hash[out2.reverse!]
+
+          sum = 0
+          out.each do |value|
+            sum += value[1][:hours_count]
+            value[1][:hours_count] = sum
+          end
+
+          running_total = Hash[out]
+
+
+          # pp grouped_hours.keys
+          #
+          # fail "kokos"
+
+          grouped_hours.each_pair do |key,values|
+            if (default_running_totals.include?(key) and running_total[key][:hours_count] < default_running_totals[key])
               # lets rock
-
-              @log.info "Found #{hours_per_period - number_of_hours_in_current_period}  hours to expire"
+              hours_to_expire = default_running_totals[key] - running_total[key][:hours_count]
+              @log.info "Found #{hours_to_expire}  hours to expire in #{key}"
               task_id = Synchronizer::ExpirationHelper.create_expiration_task(project.ID,{'attask' => attask})
-              Synchronizer::ExpirationHelper.expire_hours(hours_per_period - number_of_hours_in_current_period,expiration_period,key,{'attask' => attask,'project_id' => project.ID,'task_id' => task_id,'billable_id' => HOURS_TYPES[:billable]})
+              Synchronizer::ExpirationHelper.expire_hours(hours_to_expire,expiration_period,values[:gm],{'attask' => attask,'project_id' => project.ID,'task_id' => task_id,'billable_id' => HOURS_TYPES[:billable]})
+
+              # Lets add update hours to running total
+              running_total.each do |key,value|
+                if (value[:gm].numeric_key > values[:gm].numeric_key )
+                  value[:hours_count] += hours_to_expire
+                end
+              end
             end
           end
 
