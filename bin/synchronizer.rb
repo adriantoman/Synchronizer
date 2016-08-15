@@ -801,10 +801,10 @@ command :add do |c|
 
 
       if ((!li[:Opportunity][:Services_Type_Subcategory__c].nil? and li[:Opportunity][:Services_Type_Subcategory__c] == "EOR") or ( ['GD-ENT-EOR','EOR-CST'].include?(li[:Product][:Name])))
-        project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+        project.ownerID = users.find{|u| u.username == "will.kotterman@gooddata.com"}.ID
         #project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
-        notification_to = {:to => "tom.kolich@gooddata.com"}
+        notification_to = {:to => "will.kotterman@gooddata.com"}
         notification_to[:cc] = ["martin.hapl@gooddata.com"]
         if (li[:Opportunity][:Type] == "Powered by")
           project["programID"] = "542124640019e2476c1e1c49dc2b315f"
@@ -812,10 +812,10 @@ command :add do |c|
           project["programID"] = "542128040019fa3458191adec117b86c"
         end
       elsif ((['PS-SA-ESS','PS-SA-PRO','PS-SA-ENT'].include?(li[:Product][:Name])))
-        project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+        project.ownerID = users.find{|u| u.username == "will.kotterman@gooddata.com"}.ID
         #project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
-        notification_to = {:to => "tom.kolich@gooddata.com"}
+        notification_to = {:to => "will.kotterman@gooddata.com"}
         notification_to[:cc] = ["martin.hapl@gooddata.com"]
         project["programID"] = "54d36530005ccbe7ea635b58163d9e48"
 
@@ -827,14 +827,14 @@ command :add do |c|
           project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
           project["programID"] = "5420533b006eb9feac3c40df0f8b0178"
         elsif (li[:Service_Type__c] == "EOR" or li[:Service_Type__c] == "CSM")
-          project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+          project.ownerID = users.find{|u| u.username == "will.kotterman@gooddata.com"}.ID
           project["programID"] = "542124640019e2476c1e1c49dc2b315f"
         else
           project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
         end
 
         notification_to[:to] = 'martin.hapl@gooddata.com'
-        notification_to[:cc] = ['karel.novak@gooddata.com',"tom.kolich@gooddata.com","zd@gooddata.com",'sumeet.howe@gooddata.com','ryan.snyder@gooddata.com']
+        notification_to[:cc] = ['karel.novak@gooddata.com',"will.kotterman@gooddata.com","zd@gooddata.com",'sumeet.howe@gooddata.com','ryan.snyder@gooddata.com']
         project["groupID"] = "51dece1700022dc5b57063720458e8d2"
       elsif (li[:Opportunity][:Type] == "Direct")
         if (li[:Service_Type__c] == "PS")
@@ -844,7 +844,7 @@ command :add do |c|
            project.ownerID = users.find{|u| u.username == "sumeet.howe@gooddata.com"}.ID
            project["programID"] = "542124960019e2cb8e42fcb1e9bd0796"
         elsif (li[:Service_Type__c] == "EOR" or li[:Service_Type__c] == "CSM")
-          project.ownerID = users.find{|u| u.username == "tom.kolich@gooddata.com"}.ID
+          project.ownerID = users.find{|u| u.username == "will.kotterman@gooddata.com"}.ID
           project["programID"] = "542128040019fa3458191adec117b86c"
         else
           project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
@@ -853,7 +853,7 @@ command :add do |c|
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
         notification_to = {
             :to => 'martin.hapl@gooddata.com',
-            :cc => ['sumeet.howe@gooddata.com',"tom.kolich@gooddata.com","zd@gooddata.com","karel.novak@gooddata.com",'ryan.snyder@gooddata.com']
+            :cc => ['sumeet.howe@gooddata.com',"will.kotterman@gooddata.com","zd@gooddata.com","karel.novak@gooddata.com",'ryan.snyder@gooddata.com']
         }
       else
         project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
