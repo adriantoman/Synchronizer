@@ -336,10 +336,10 @@ command :update_product do |c|
 
       if (!sfdc_object.nil?)
         total_price = nil
-        if (sfdc_object[:TotalPrice].nil? or sfdc_object[:TotalPrice] == "0" or sfdc_object[:TotalPrice] == "0.0" )
-          total_price = sfdc_object[:Allocated_Amount__c]
-        else
+        if (sfdc_object[:Allocated_Amount__c].nil? or sfdc_object[:Allocated_Amount__c] == "0" or sfdc_object[:Allocated_Amount__c] == "0.0" )
           total_price = sfdc_object[:TotalPrice]
+        else
+          total_price = sfdc_object[:Allocated_Amount__c]
         end
 
 
