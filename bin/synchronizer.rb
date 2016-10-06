@@ -757,7 +757,7 @@ command :add do |c|
     end
 
 
-    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (["Service","Services","service","services"].include?(li[:Product_Family__c]) and Float(li[:Total_Service_Hours__c]) > 0) or (["Service","Services","service","services"].include?(li[:Product_Family__c]) and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) or ( (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST') and Float(li[:Total_Service_Hours__c]) > 0)}
+    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (["Service","Services","service","services"].include?(li[:Product_Family__c]) and Float(li[:Total_Service_Hours__c]) > 0) or (["Service","Services","service","services"].include?(li[:Product_Family__c]) and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) }
     #opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (li[:Product_Family__c] == "Service" and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) or ( (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST') and Float(li[:Total_Service_Hours__c]) > 0)}
     opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Opportunity] != nil}
 
@@ -795,70 +795,39 @@ command :add do |c|
 
       project = Attask::Project.new()
       project[CGI.escape("DE:Product ID")] = li[:Id]
-      project.name =  li[:Opportunity][:Name].match(/^[^->]*/)[0].strip + " " + li[:Product][:Name]
+      #project.name = "#{li[:Opportunity][:Name].match(/^[^->]*/)[0].strip} #{li[:Product][:Name]}"
+      project["name"] = "#{li[:Opportunity][:Name].match(/^[^->]*/)[0].strip} #{li[:Product][:Name]}"
       project[CGI.escape("DE:Total Service Hours")] = li[:Total_Service_Hours__c]
       project.status = "IDA"
 
-
-      if ((!li[:Opportunity][:Services_Type_Subcategory__c].nil? and li[:Opportunity][:Services_Type_Subcategory__c] == "EOR") or ( ['GD-ENT-EOR','EOR-CST'].include?(li[:Product][:Name])))
-        project.ownerID = users.find{|u| u.username == "will.kotterman@gooddata.com"}.ID
-        #project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
-        project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
-        notification_to = {:to => "will.kotterman@gooddata.com"}
-        notification_to[:cc] = ["martin.hapl@gooddata.com"]
-        if (li[:Opportunity][:Type] == "Powered by")
-          project["programID"] = "542124640019e2476c1e1c49dc2b315f"
-        elsif (li[:Opportunity][:Type] == "Direct")
-          project["programID"] = "542128040019fa3458191adec117b86c"
-        end
-      elsif ((['PS-SA-ESS','PS-SA-PRO','PS-SA-ENT'].include?(li[:Product][:Name])))
-        project.ownerID = users.find{|u| u.username == "will.kotterman@gooddata.com"}.ID
-        #project.ownerID = users.find{|u| u.username == "jiri.stovicek@gooddata.com"}.ID
+      if  ((['PS-SA-ESS','PS-SA-PRO','PS-SA-ENT'].include?(li[:Product][:Name])))
+        project["ownerID"] = users.find{|u| u.username == "will.kotterman@gooddata.com"}.ID
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
         notification_to = {:to => "will.kotterman@gooddata.com"}
         notification_to[:cc] = ["martin.hapl@gooddata.com"]
         project["programID"] = "54d36530005ccbe7ea635b58163d9e48"
-
-      elsif (li[:Opportunity][:Type] == "Powered by")
-        if (li[:Service_Type__c] == "PS")
-          project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
-          project["programID"] = "52e01c390038a885fa659dea5d3b2e3b"
-        elsif (li[:Service_Type__c] == "PSOR")
-          project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
-          project["programID"] = "5420533b006eb9feac3c40df0f8b0178"
-        elsif (li[:Service_Type__c] == "EOR" or li[:Service_Type__c] == "CSM")
-          project.ownerID = users.find{|u| u.username == "will.kotterman@gooddata.com"}.ID
-          project["programID"] = "542124640019e2476c1e1c49dc2b315f"
-        else
-          project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
-        end
-
-        notification_to[:to] = 'martin.hapl@gooddata.com'
-        notification_to[:cc] = ['karel.novak@gooddata.com',"will.kotterman@gooddata.com","zd@gooddata.com",'sumeet.howe@gooddata.com','ryan.snyder@gooddata.com']
-        project["groupID"] = "51dece1700022dc5b57063720458e8d2"
-      elsif (li[:Opportunity][:Type] == "Direct")
-        if (li[:Service_Type__c] == "PS")
-          project.ownerID = users.find{|u| u.username == "sumeet.howe@gooddata.com"}.ID
-          project["programID"] = "542052f6006eb1df6f2aa25578bf00de"
-        elsif (li[:Service_Type__c] == "PSOR")
-           project.ownerID = users.find{|u| u.username == "sumeet.howe@gooddata.com"}.ID
-           project["programID"] = "542124960019e2cb8e42fcb1e9bd0796"
-        elsif (li[:Service_Type__c] == "EOR" or li[:Service_Type__c] == "CSM")
-          project.ownerID = users.find{|u| u.username == "will.kotterman@gooddata.com"}.ID
-          project["programID"] = "542128040019fa3458191adec117b86c"
-        else
-          project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
-        end
-
+      elsif ((['PS-GUIDED'].include?(li[:Product][:Name])))
+        project["ownerID"] = users.find{|u| u.username == "will.kotterman@gooddata.com"}.ID
         project["groupID"] = "50f73e62002b7f7a9d0196eba05bf1b1"
-        notification_to = {
-            :to => 'martin.hapl@gooddata.com',
-            :cc => ['sumeet.howe@gooddata.com',"will.kotterman@gooddata.com","zd@gooddata.com","karel.novak@gooddata.com",'ryan.snyder@gooddata.com']
-        }
+        notification_to = {:to => "will.kotterman@gooddata.com"}
+        notification_to[:cc] = ["martin.hapl@gooddata.com"]
+        project["programID"] = "56d80da30007ab3bf698d74c657d98fc"
+      elsif ((['PS-IMPL'].include?(li[:Product][:Name])))
+        project["ownerID"] = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
+        project["groupID"] = "51dece1700022dc5b57063720458e8d2"
+        notification_to = {:to => "martin.hapl@gooddata.com"}
+        notification_to[:cc] = ['karel.novak@gooddata.com',"will.kotterman@gooddata.com",'sumeet.howe@gooddata.com']
+        project["programID"] = "52e01c390038a885fa659dea5d3b2e3b"
+      elsif ((['PS-HOURS'].include?(li[:Product][:Name])))
+        project["ownerID"] = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
+        project["groupID"] = "51dece1700022dc5b57063720458e8d2"
+        notification_to = {:to => "martin.hapl@gooddata.com"}
+        notification_to[:cc] = ['karel.novak@gooddata.com',"will.kotterman@gooddata.com",'sumeet.howe@gooddata.com']
+        project["programID"] = "5420533b006eb9feac3c40df0f8b0178"
       else
-        project.ownerID = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
+        project["ownerID"] = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
         notification_to[:to] = 'martin.hapl@gooddata.com'
-        notification_to[:cc] = ['karel.novak@gooddata.com','ryan.snyder@gooddata.com']
+        notification_to[:cc] = ['karel.novak@gooddata.com',"will.kotterman@gooddata.com",'sumeet.howe@gooddata.com']
       end
 
       project["companyID"] =  company.ID
@@ -871,20 +840,10 @@ command :add do |c|
       project["URL"] = "https://na6.salesforce.com/#{li[:Id]}" if li[:Id] != nil
       project[CGI.escape("DE:Salesforce ID")] = li[:Opportunity][:Id]
 
-      #li[:Product][:Name] == 'PS-INVESTMENT'
-      # Requested by M.H od 9.9.2014
-      if (Float(li[:Approved_Investment_Hours__c]) == Float(li[:Total_Service_Hours__c]))
-        project[CGI.escape("DE:Project Type")] = "Investment"
-        project[CGI.escape("DE:Budget Hours")] =  0
-      elsif (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST')
-        project[CGI.escape("DE:Project Type")] = "Customer Success"
-        budget_hours = Float(li[:Service_Hours_per_Period__c]) *  Float(li[:Number_of_Periods__c])
-        project[CGI.escape("DE:Budget Hours")] =  budget_hours
-      else
-        project[CGI.escape("DE:Project Type")] = "Implementation"
-        budget_hours = Float(li[:Service_Hours_per_Period__c]) *  Float(li[:Number_of_Periods__c])
-        project[CGI.escape("DE:Budget Hours")] =  budget_hours
-      end
+      project[CGI.escape("DE:Project Type")] = "Implementation"
+      budget_hours = Float(li[:Service_Hours_per_Period__c]) *  Float(li[:Number_of_Periods__c])
+      project[CGI.escape("DE:Budget Hours")] =  budget_hours
+
 
       project[CGI.escape("DE:Hours per Period")] = li[:Service_Hours_per_Period__c]
       project[CGI.escape("DE:Number of Periods")] = li[:Number_of_Periods__c]
@@ -892,8 +851,10 @@ command :add do |c|
       project[CGI.escape("DE:Salesforce Type")] = li[:Opportunity][:Type]
 
       @log.info "Creating project #{project.name} with SFDC ID #{li[:Id]}"
+
       project = attask.project.add(project)[0]
       Pony.mail(:to => notification_to[:to],:cc => notification_to[:cc],:from => 'attask@gooddata.com', :subject => "New project with #{project.name} was create in attask.", :body => "Project link: https://gooddata.attask-ondemand.com/project/view?ID=#{project.ID}")
+
       @work_done = true
       count = count + 1
     end
