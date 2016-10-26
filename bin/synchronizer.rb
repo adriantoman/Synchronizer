@@ -841,12 +841,14 @@ command :add do |c|
       project[CGI.escape("DE:Salesforce ID")] = li[:Opportunity][:Id]
 
       project[CGI.escape("DE:Project Type")] = "Implementation"
-      budget_hours = Float(li[:Service_Hours_per_Period__c]) *  Float(li[:Number_of_Periods__c])
+
+
+      budget_hours = Float(li[:Service_Hours_per_Period__c] || '0') *  Float(li[:Number_of_Periods__c] || '0')
       project[CGI.escape("DE:Budget Hours")] =  budget_hours
 
 
-      project[CGI.escape("DE:Hours per Period")] = li[:Service_Hours_per_Period__c]
-      project[CGI.escape("DE:Number of Periods")] = li[:Number_of_Periods__c]
+      project[CGI.escape("DE:Hours per Period")] = li[:Service_Hours_per_Period__c] || '0'
+      project[CGI.escape("DE:Number of Periods")] = li[:Number_of_Periods__c] || '0'
       project[CGI.escape("DE:Expiration Period")] = li[:Expiration_Period__c]
       project[CGI.escape("DE:Salesforce Type")] = li[:Opportunity][:Type]
 
