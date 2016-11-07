@@ -824,6 +824,12 @@ command :add do |c|
         notification_to = {:to => "martin.hapl@gooddata.com"}
         notification_to[:cc] = ['karel.novak@gooddata.com',"will.kotterman@gooddata.com",'sumeet.howe@gooddata.com']
         project["programID"] = "5420533b006eb9feac3c40df0f8b0178"
+      elsif ((['TRN-CUST'].include?(li[:Product][:Name])))
+        project["ownerID"] = users.find{|u| u.username == "andy.oppel@gooddata.com"}.ID
+        project["groupID"] = "50f49e85000893b820341d23978dd05b"
+        notification_to = {:to => "martin.hapl@gooddata.com"}
+        notification_to[:cc] = ["andy.oppel@gooddata.com"]
+        project["programID"] = "582070da0025f5865e9f125454ad46b0"
       else
         project["ownerID"] = users.find{|u| u.username == "martin.hapl@gooddata.com"}.ID
         notification_to[:to] = 'martin.hapl@gooddata.com'
