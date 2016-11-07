@@ -757,7 +757,7 @@ command :add do |c|
     end
 
 
-    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (["Service","Services","service","services"].include?(li[:Product_Family__c]) and Float(li[:Total_Service_Hours__c]) > 0) or (["Service","Services","service","services"].include?(li[:Product_Family__c]) and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) }
+    opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (["Service","Services","service","services","Training"].include?(li[:Product_Family__c]) and Float(li[:Total_Service_Hours__c]) > 0) or (["Service","Services","service","services","Training"].include?(li[:Product_Family__c]) and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) }
     #opportunityLineItem_data = opportunityLineItem_data.find_all {|li| (li[:Product_Family__c] == "Service" and Float(li[:TotalPrice]) > 0 and Float(li[:Total_Service_Hours__c]) > 0) or (li[:Product_Family__c] == "Service" and Float(li[:Total_Service_Hours__c]) > 0 and Float(li[:Total_Service_Hours__c]) == Float(li[:Approved_Investment_Hours__c])) or ( (li[:Product][:Name] == 'GD-ENT-EOR' or li[:Product][:Name] == 'EOR-CST') and Float(li[:Total_Service_Hours__c]) > 0)}
     opportunityLineItem_data = opportunityLineItem_data.find_all {|li| li[:Opportunity] != nil}
 
