@@ -62,8 +62,10 @@ module Synchronizer
       # This method will remove errors in date definition (I hope!)
       def round_start_date(input)
         date = Time.parse(input)
-        if (date.day > 15)
+        if (date.day > 15 and date.month < 12)
           Time.parse("#{date.year}-#{date.month+1}-1")
+        elsif (date.day > 15 and date.month == 12)
+          Time.parse("#{date.year+1}-1-1")
         else
           Time.parse("#{date.year}-#{date.month}-1")
         end

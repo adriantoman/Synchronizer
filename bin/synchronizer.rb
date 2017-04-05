@@ -1478,7 +1478,7 @@ command :expire_hours do |c|
 
 
     #users = attask.user.search({:fields => "ID,name",:customFields => ""})
-    projects = attask.project.search({:fields => 'ID,name',:customFields => 'DE:Salesforce Name,DE:Product ID,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period'})
+    projects = attask.project.search({:fields => 'ID,name,status',:customFields => 'DE:Salesforce Name,DE:Product ID,DE:Hours per Period,DE:Number of Periods,DE:Expiration Period'})
 
 
     salesforce = Synchronizer::SalesForce.new(sf_username,sf_password)
@@ -1519,9 +1519,10 @@ command :expire_hours do |c|
     projects = projects.find_all{|p| (p['DE:Product ID'] != nil and p['DE:Product ID'] != '' and p['DE:Product ID'] != p['DE:Salesforce ID']) }
 
     opportunityLineItem_data.each do |sfdc|
-      project = projects.find{|p| sfdc[:Id] == p['DE:Product ID'] }
 
-      if (!project.nil?)
+      project = projects.find{|p| sfdc[:Id] == p['DE:Product ID']  }
+
+      if (!project.nil? && (project['status'] == 'CUR' || project['status'] == 'PLN' || project['status'] == 'NEW'))
         @log.info "Processing #{project.name} (#{project['ID']})"
 
         # Possible expiration periods Year,Month,Quarter
@@ -1530,14 +1531,18 @@ command :expire_hours do |c|
         expiration_period = project["DE:Expiration Period"]
 
         sku_start = Synchronizer::ExpirationHelper.round_start_date(sfdc[:SKU_Start__c])
-        @log.info "Hours_per_period -> #{hours_per_period}, Number of period -> #{number_of_periods}, expiration_period -> #{expiration_period} (SKU START #{sfdc[:SKU_Start__c]} -> #{sku_start})"
+        @log.info "   Hours_per_period -> #{hours_per_period}, Number of period -> #{number_of_periods}, expiration_period -> #{expiration_period} (SKU START #{sfdc[:SKU_Start__c]} -> #{sku_start})"
 
         if (sku_start < Time.now)
 
           default_running_totals = Synchronizer::ExpirationHelper.generate_default_running_total(sku_start,hours_per_period,number_of_periods,expiration_period)
+          default_total_hour_amount = hours_per_period * number_of_periods
 
           hours = attask.hour.search({},{:projectID => project.ID})
           hours.delete_if{|hour| hour['hourTypeID'] != HOURS_TYPES[:billable] or (Time.parse(hour['entryDate']).month >= Time.now.month and Time.parse(hour['entryDate']).year >= Time.now.year) }
+
+
+          total_hours_amount = hours.inject(0){|sum,x| sum + x['hours']}
 
           grouped_hours = {}
           hours.group_by do |hour|
@@ -1586,18 +1591,13 @@ command :expire_hours do |c|
 
           running_total = Hash[out]
 
-
-          # pp grouped_hours.keys
-          #
-          # fail "kokos"
-
           grouped_hours.each_pair do |key,values|
-            if (default_running_totals.include?(key) and running_total[key][:hours_count] < default_running_totals[key])
+            if (default_running_totals.include?(key) and running_total[key][:hours_count] < default_running_totals[key] and total_hours_amount < default_total_hour_amount)
               # lets rock
               hours_to_expire = default_running_totals[key] - running_total[key][:hours_count]
-              @log.info "Found #{hours_to_expire}  hours to expire in #{key}"
+              @log.info "         Found #{hours_to_expire}  hours to expire in #{key} (expiration period #{expiration_period})"
               task_id = Synchronizer::ExpirationHelper.create_expiration_task(project.ID,{'attask' => attask})
-              Synchronizer::ExpirationHelper.expire_hours(hours_to_expire,expiration_period,values[:gm],{'attask' => attask,'project_id' => project.ID,'task_id' => task_id,'billable_id' => HOURS_TYPES[:billable]})
+              #Synchronizer::ExpirationHelper.expire_hours(hours_to_expire,expiration_period,values[:gm],{'attask' => attask,'project_id' => project.ID,'task_id' => task_id,'billable_id' => HOURS_TYPES[:billable]})
 
               # Lets add update hours to running total
               running_total.each do |key,value|
@@ -1605,6 +1605,8 @@ command :expire_hours do |c|
                   value[:hours_count] += hours_to_expire
                 end
               end
+
+              total_hours_amount += hours_to_expire
             end
           end
 
